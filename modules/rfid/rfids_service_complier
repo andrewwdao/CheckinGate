@@ -1,0 +1,138 @@
+#!/bin/bash
+
+set -eu -o pipefail # fail on error , debug all lines
+
+if [ 'root' != $( whoami ) ] ; then
+  echo "Please run as root! ( sudo ${0} )"
+  exit 1;
+fi
+
+trap 'interrupt' 2 # signal 2 is SIGINT, run interrupt function if get intterupted
+
+JDIR=src/java/__temp_dir
+CDIR=src/C/obj
+
+cleanup() { # at the main folder
+    echo "Cleaning up..."
+	[ -d "$JDIR" ] && ( rm -rf $JDIR && echo "Java temporary directory existed. Removing..." )
+    [ -d "$CDIR" ] && ( rm -rf $CDIR && echo "C temporary directory existed. Removing..." )
+    echo
+	echo "Done"
+}
+
+interrupt() {
+	echo
+	echo
+    echo "INTERRUPTED!"
+    cleanup
+    exit 1
+}
+
+handleError() {
+	echo
+    echo "==================="
+	echo "       ERROR       "
+    echo "==================="
+    echo "----- ABORTED -----"
+    cleanup
+    exit 1
+}
+
+cleanup
+
+#=========================== C complier =====================================
+echo "Creating temporary directory for C... "
+mkdir $CDIR
+cd $CDIR
+cd ..
+
+echo "Making rfid binaries executable"
+make clean
+make rfid
+
+chmod +x rfid
+mv rfid ../..
+
+echo
+echo
+echo "Done C binaries"
+echo
+cd ../..
+#=========================== Java complier =====================================
+
+#[ -d "__temp_dir" ] && ( read -p "RFID directory existed. Remove? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || echo "Exiting..." && exit 1 )
+echo
+echo "Creating temporary directory for Java... "
+mkdir $JDIR
+cd $JDIR
+
+echo
+echo -n "Extracting amqp-client-5.7.1.jar..."
+jar xf ../lib/amqp-client-5.7.1.jar
+if [ $? != 0 ]; then handleError; fi
+echo "Done"
+
+echo
+echo -n "Extracting slf4j-api-1.7.26.jar..."
+jar xf ../lib/slf4j-api-1.7.26.jar
+if [ $? != 0 ]; then handleError; fi
+echo "Done"
+
+echo
+echo -n "Extracting slf4j-simple-1.7.26.jar..."
+jar xf ../lib/slf4j-simple-1.7.26.jar
+if [ $? != 0 ]; then handleError; fi
+echo "Done"
+
+################## start complying service module ########################
+
+echo
+echo "Copying module RFID java files"
+cp ../RFID.java .
+if [ $? != 0 ]; then handleError; fi
+
+echo "Removing RFID/META-INF/MANIFEST.MF"
+rm META-INF/MANIFEST.MF
+if [ $? != 0 ]; then handleError; fi
+
+echo "Creating RFID/MANIFEST.MF"
+echo "Main-Class: RFID" > MANIFEST.MF
+if [ $? != 0 ]; then handleError; fi
+
+echo -n "Compiling RFID.class... "
+javac RFID.java
+if [ $? != 0 ]; then handleError; fi
+echo "Done"
+
+echo -n "Packaging into jar... "
+jar cmf MANIFEST.MF rfid_service.jar RFID.class RFID\$1.class META-INF com org rabbitmq-amqp-client.properties version.properties
+if [ $? != 0 ]; then handleError; fi
+echo "Done"
+
+echo "Moving rfid_service.jar to main folder"
+mv rfid_service.jar ../../..
+if [ $? != 0 ]; then handleError; fi
+echo "Done"
+
+################## module RFID 02 ########################
+
+
+##########################################################
+cd ../../..
+cleanup
+if [ $? != 0 ]; then handleError; fi
+
+trap - 2 # remove trap
+
+echo "========================="
+echo "    BUILD SUCCESSFUL     "
+echo "========================="
+echo "To run service for module 01, use command:"
+echo "    \"java -jar rfid_service.jar 1\""
+echo
+echo "To run service for module 02, use command:"
+echo "    \"java -jar rfid_service.jar 2\""
+echo
+echo "========================="
+echo 
+echo "========================="

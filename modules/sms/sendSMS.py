@@ -5,7 +5,7 @@ import time
 
 if len(sys.argv)!=3:
     print('Usage:')
-    print('\tpython sendArgs.py <phonenumber> <message>')
+    print('\tpython sendSMS.py <phonenumber> <message>')
     sys.exit(1)
 
 

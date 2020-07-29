@@ -54,7 +54,12 @@ public class RFID {
         long timestamp = new Date().getTime() / 1000L;
         
         // return "[" + timestamp + "," + this.SENSOR_ID + "," + rawData + "," + "null" + "]";
-        return "{\"timestamp\":\"" + timestamp +"\",\"event_type\":\"rfid\",\"source\":\"rfid." + this.RFID_NUMBER + "\",\"_tag_id\":\"" + rawData +"\"}";
+        return "{" +
+                    "\"timestamp\":\"" + timestamp +"\"," +
+                    "\"event_type\":\"" + "rfid" + "\"," +
+                    "\"source\":\"" + "rfid." + this.RFID_NUMBER + "\"," +
+                    "\"data\":\"" + "tag_id:" + rawData + "\"" +
+                "}";
     }
 
     /**
@@ -134,6 +139,6 @@ public class RFID {
             System.out.println(message);
         }
         
-        // new RFID().sendMessage("TESTING ONLY");
+        // System.out.println(new RFID().formatMessage("TESTING ONLY"));
     }
 } 

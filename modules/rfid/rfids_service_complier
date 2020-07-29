@@ -62,7 +62,7 @@ cd ../..
 
 #[ -d "__temp_dir" ] && ( read -p "RFID directory existed. Remove? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || echo "Exiting..." && exit 1 )
 echo
-echo "Creating temporary directory for Java... "
+echo "Creating temporary directory for Java..."
 mkdir $JDIR
 cd $JDIR
 
@@ -70,19 +70,19 @@ echo
 echo -n "Extracting amqp-client-5.7.1.jar..."
 jar xf ../lib/amqp-client-5.7.1.jar
 if [ $? != 0 ]; then handleError; fi
-echo "Done"
+echo " Done"
 
 echo
 echo -n "Extracting slf4j-api-1.7.26.jar..."
 jar xf ../lib/slf4j-api-1.7.26.jar
 if [ $? != 0 ]; then handleError; fi
-echo "Done"
+echo " Done"
 
 echo
 echo -n "Extracting slf4j-simple-1.7.26.jar..."
 jar xf ../lib/slf4j-simple-1.7.26.jar
 if [ $? != 0 ]; then handleError; fi
-echo "Done"
+echo " Done"
 
 ################## start complying service module ########################
 

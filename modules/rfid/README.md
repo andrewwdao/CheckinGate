@@ -6,4 +6,10 @@ chmod +x rfids_service_complier
 '''bash
 sudo ./rfids_service_complier
 '''
+## Two needed files for the system are (Java):
+ - rfid_service.jar
+ - rfid
 
+## Two needed files for the system are (Python):
+ - rfid_service.py
+ - rfid

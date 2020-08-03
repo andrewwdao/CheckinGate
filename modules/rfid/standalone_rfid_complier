@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eu -o pipefail # fail on error , debug all lines
+set -u -o pipefail # fail on error , debug all lines
 
 if [ 'root' != $( whoami ) ] ; then
   echo "Please run as root! ( sudo ${0} )"
@@ -8,33 +8,39 @@ if [ 'root' != $( whoami ) ] ; then
 fi
 
 trap 'interrupt' 2 # signal 2 is SIGINT, run interrupt function if get intterupted
+trap 'handleError' ERR # ERR is one of the signal specifications implemented internally by bash. Another way: if [ $? != 0 ]; then handleError; fi
 
 JDIR=src/java/__temp_dir
 CDIR=src/C/obj
+BASEDIR=$(pwd)
 
 cleanup() { # at the main folder
     echo "Cleaning up..."
+    cd $BASEDIR
 	[ -d "$JDIR" ] && ( rm -rf $JDIR && echo "Java temporary directory existed. Removing..." )
     [ -d "$CDIR" ] && ( rm -rf $CDIR && echo "C temporary directory existed. Removing..." )
-    echo
-	echo "Done"
+    trap - 2 # remove trap
+    trap - ERR # remove trap
 }
 
 interrupt() {
 	echo
 	echo
     echo "INTERRUPTED!"
+    echo
     cleanup
     exit 1
 }
 
 handleError() {
-	echo
+    echo
     echo "==================="
 	echo "       ERROR       "
     echo "==================="
-    echo "----- ABORTED -----"
+    echo
     cleanup
+    echo
+    echo "----- ABORTED -----"
     exit 1
 }
 
@@ -66,22 +72,18 @@ echo "Creating temporary directory for Java..."
 mkdir $JDIR
 cd $JDIR
 
-echo
 echo -n "Extracting amqp-client-5.7.1.jar..."
 jar xf ../lib/amqp-client-5.7.1.jar
-if [ $? != 0 ]; then handleError; fi
 echo " Done"
 
 echo
 echo -n "Extracting slf4j-api-1.7.26.jar..."
 jar xf ../lib/slf4j-api-1.7.26.jar
-if [ $? != 0 ]; then handleError; fi
 echo " Done"
 
 echo
 echo -n "Extracting slf4j-simple-1.7.26.jar..."
 jar xf ../lib/slf4j-simple-1.7.26.jar
-if [ $? != 0 ]; then handleError; fi
 echo " Done"
 
 ################## start complying service module ########################
@@ -89,29 +91,23 @@ echo " Done"
 echo
 echo "Copying module RFID java files"
 cp ../RFID.java .
-if [ $? != 0 ]; then handleError; fi
 
 echo "Removing RFID/META-INF/MANIFEST.MF"
 rm META-INF/MANIFEST.MF
-if [ $? != 0 ]; then handleError; fi
 
 echo "Creating RFID/MANIFEST.MF"
 echo "Main-Class: RFID" > MANIFEST.MF
-if [ $? != 0 ]; then handleError; fi
 
 echo -n "Compiling RFID.class... "
 javac RFID.java
-if [ $? != 0 ]; then handleError; fi
 echo "Done"
 
 echo -n "Packaging into jar... "
 jar cmf MANIFEST.MF rfid_service.jar RFID.class RFID\$1.class META-INF com org rabbitmq-amqp-client.properties version.properties
-if [ $? != 0 ]; then handleError; fi
 echo "Done"
 
 echo "Moving rfid_service.jar to main folder"
 mv rfid_service.jar ../../..
-if [ $? != 0 ]; then handleError; fi
 echo "Done"
 
 ################## module RFID 02 ########################
@@ -120,9 +116,9 @@ echo "Done"
 ##########################################################
 cd ../../..
 cleanup
-if [ $? != 0 ]; then handleError; fi
 
 trap - 2 # remove trap
+trap - ERR # remove trap
 
 echo "========================="
 echo "    BUILD SUCCESSFUL     "

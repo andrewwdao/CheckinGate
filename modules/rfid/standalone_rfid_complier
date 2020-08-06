@@ -130,5 +130,5 @@ echo "To run service for module 02, use command:"
 echo "    \"java -jar rfid_service.jar 2\""
 echo
 echo "========================="
-echo 
+echo "          DONE!          "
 echo "========================="

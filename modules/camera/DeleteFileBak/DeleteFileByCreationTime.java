@@ -7,14 +7,14 @@ import java.nio.file.Paths;
 
 public class DeleteFileByCreationTime{
 	public static void main(String []args){
-		// Max file in derectory
-		int maxFileInDerectory = 5;
+		// Max file in directory
+		int maxFileInDirectory = 5;
 		
-		// Path to derectory
-		String derectoryPath = "./Test/";
+		// Path to directory
+		String directoryPath = "./Test/";
 		
 		// List file in Directory
-		File[] files = new File(derectoryPath).listFiles();
+		File[] files = new File(directoryPath).listFiles();
 		
 		// Define Comparator by creationTime attribute of File
 		Comparator<File> comparator = Comparator.comparing(file -> {
@@ -32,7 +32,7 @@ public class DeleteFileByCreationTime{
         	for (File file : files){
                 	count++;
                 	System.out.println(file);
-                	if(count >= maxFileInDerectory){
+                	if(count >= maxFileInDirectory){
                         	file.delete();
                 	}
         	}

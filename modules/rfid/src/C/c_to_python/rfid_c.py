@@ -42,11 +42,13 @@ class RFID:
     def format_message(self, raw_data):
         timestamp = int(time.time())
 
+        to_dec = int(raw_data, 16)
         return ("{" +
-                    "\"timestamp\":" + str(timestamp) + "\"," +
+                    "\"timestamp\":" + str(timestamp) + "," +
                     "\"event_type\":\"" + "rfid" + "\"," +
                     "\"source\":\"" + "rfid." + self.RFID_NUMBER + "\"," +
-                    "\"data\":\"" + "tag_id:" + raw_data + "\"" +
+                    # "\"data\":\"" + "tag_id:" + raw_data + "\"" +
+                    "\"data\":\"" + "tag_id:" + str(to_dec) + "\"" +
                 "}")
 
     def send_message(self, message):

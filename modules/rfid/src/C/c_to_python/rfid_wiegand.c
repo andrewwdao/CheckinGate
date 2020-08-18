@@ -243,7 +243,7 @@ void wiegand_timeout() { //Timeout from last bit read, sequence may be completed
 
             char command[100];
             // sprintf(command, "python3 rfid_c.py 0x%X &", wds.full_code);
-            sprintf(command, "python3 rfid_c.py %X &", wds.full_code);
+            sprintf(command, "python3 rfid_c.py %d &", wds.full_code);
             system(command);
         } else { //if the received code is NOT valid
             printf("CHECKSUM_FAILED\n");

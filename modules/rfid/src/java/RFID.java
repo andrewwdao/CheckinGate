@@ -55,7 +55,7 @@ public class RFID {
         
         // return "[" + timestamp + "," + this.SENSOR_ID + "," + rawData + "," + "null" + "]";
         return "{" +
-                    "\"timestamp\":\"" + timestamp +"\"," +
+                    "\"timestamp\": + timestamp +"," +
                     "\"event_type\":\"" + "rfid" + "\"," +
                     "\"source\":\"" + "rfid." + this.RFID_NUMBER + "\"," +
                     "\"data\":\"" + "tag_id:" + rawData + "\"" +

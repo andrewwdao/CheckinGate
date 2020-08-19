@@ -45,7 +45,7 @@ CFLAGS  = -l wiringPi -lpthread -lrt  -Wall -O2 -pipe -I$(IDIR)            \
 # $(ODIR)/%.o: %.c $(PIR_DEPS)
 # 	$(CC) -c -o $@ $< $(CFLAGS)
 
-pir: $(PIR_OBJ)
+pir: pir.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 .PHONY: clean

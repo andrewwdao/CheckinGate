@@ -146,12 +146,12 @@ class UHFReader():
 
         self.ser.write(self.format_command([READ_CMD, membank, word_address, word_cnt]))
 
-        header = uhf.read_output()[0]
+        header = self.read_output()[0]
         if header != 0xA0:
             print("Wrong response header: " + format(header, '#04x'))
 
-        message_length = uhf.read_output()[0]
-        response = uhf.read_output(message_length)
+        message_length = self.read_output()[0]
+        response = self.read_output(message_length)
 
         if message_length == 4:
             # if response[2] == NO_TAG_ERROR:
@@ -200,12 +200,12 @@ class UHFReader():
         command += [membank, word_address, word_cnt] + data
         self.ser.write(self.format_command(command))
         
-        header = uhf.read_output()[0]
+        header = self.read_output()[0]
         if header != 0xA0:
             print("Wrong response header: " + format(header, '#04x'))
 
-        message_length = uhf.read_output()[0]
-        response = uhf.read_output(message_length)
+        message_length = self.read_output()[0]
+        response = self.read_output(message_length)
 
         if message_length == 4:
             # if response[2] == NO_TAG_ERROR:
@@ -226,9 +226,31 @@ class UHFReader():
             print("Status: " + self.get_error_message(response[-4]))
         
     
-    def realtime_inventory(self):
-        repeat = 0x01
+    def realtime_inventory_start(self, repeat=0xFF):
         self.ser.write(self.format_command([RT_INVENTORY_CMD, repeat]))
+
+
+    def read_realtime_inventory(self):
+        header = self.read_output()
+
+        if len(header) == 0:
+            return
+        
+        header = header[0]
+        if header != 0xA0:
+            print("Wrong response header: " + format(header, '#04x'))
+        
+        message_length = self.read_output()[0]
+        response = self.read_output(message_length)
+
+        pc = response[3:5]
+        epc = response[5:-2]
+        rssi = response[-2:-1]
+
+        print("PC: " + self.get_hex_string(pc))
+        print("EPC: " + self.get_hex_string(epc))
+        print("RSSI: " + self.get_hex_string(rssi))
+        print()
 
     
     def set_beeper_mode(self, mode):
@@ -248,16 +270,21 @@ class UHFReader():
 uhf = UHFReader()
 uhf.open_connection()
 uhf.reset_reader()
-uhf.read_output()
+
 # uhf.set_beeper_mode(BUZZER_TAG)
-uhf.write_tag(data=[0x00, 0x00, 0x00, 0x00],
-              membank=USER_MEMBANK,
-              word_address=0x01,
-              word_cnt=2)
+# uhf.write_tag(data=[0x00, 0x00, 0x00, 0x00],
+#               membank=USER_MEMBANK,
+#               word_address=0x01,
+#               word_cnt=2)
+# uhf.realtime_inventory_start()
+
+# uhf.read_output()
 
 while True:
-    print("\nPress enter to read tag...")
-    input()
+    uhf.realtime_inventory_start()
+    uhf.read_realtime_inventory()
+    # print("\nPress enter to read tag...")
+    # input()
 
     # Read 12 words (16 bit each) to get 24 bytes (PC + EPC + CRC not included)
-    uhf.read_tag(membank=USER_MEMBANK, word_address=0x01, word_cnt=4)
+    # uhf.read_tag(membank=USER_MEMBANK, word_address=0x01, word_cnt=4)

@@ -1,11 +1,13 @@
 import serial
 
-DEFAULT_BAUDRATE    = 115200
-DEFAULT_SERIAL_PORT = 'COM6'
+DEFAULT_BAUDRATE        = 115200
+DEFAULT_SERIAL_PORT     = 'COM6'
+DEFAULT_ACCESS_PASSWORD = [0x00, 0x00, 0x00, 0x00]
 
 # Reader commands
 RESET_CMD         = 0x70
 READ_CMD          = 0x81
+WRITE_CMD         = 0x82
 RT_INVENTORY_CMD  = 0x89 # Real time inventory
 GET_READER_ID_CMD = 0x68 # Get reader identifier
 BUZZER_CMD        = 0x7A
@@ -79,7 +81,7 @@ class UHFReader():
             return "MEMBANK OUT OF RANGE"
         if error_code == LOCK_OUT_OF_RANGE:
             return "LOCK REGION OUT OF RANGE"
-        return "UNHANLED ERROR"
+        return "UNHANLED ERROR CODE: " + format(error_code, '#04x')
 
 
     # Read datasheet for checksum function (written in C)
@@ -143,7 +145,7 @@ class UHFReader():
             return
 
         self.ser.write(self.format_command([READ_CMD, membank, word_address, word_cnt]))
-        
+
         header = uhf.read_output()[0]
         if header != 0xA0:
             print("Wrong response header: " + format(header, '#04x'))
@@ -164,10 +166,64 @@ class UHFReader():
             crc = response[5 + data_length - read_length - 2:5 + data_length - read_length]
             read_data = response[5 + data_length - read_length:5 + data_length]
 
+            print("Tag count: " + str(response[3]+response[2]))
             print("PC: " + self.get_hex_string(pc))
             print("EPC: " + self.get_hex_string(epc))
             print("CRC: " + self.get_hex_string(crc))
             print("Read data: " + self.get_hex_string(read_data))
+
+    
+    def write_tag(self, data, membank=TID_MEMBANK,
+                  access_password=DEFAULT_ACCESS_PASSWORD,
+                  word_address=0x00, word_cnt=0x01):
+        if ((membank == TID_MEMBANK and word_address + word_cnt > TID_MEMBANK_WORD_LIM) or
+            (membank == EPC_MEMBANK and word_address + word_cnt > EPC_MEMBANK_WORD_LIM) or
+            (membank == USER_MEMBANK and word_address + word_cnt > USER_MEMBANK_WORD_LIM)):
+            print("Membank word limit exceeded. (TID 12 words, EPC 8 words, USER 32 words)")
+            return
+        
+        if (membank == EPC_MEMBANK and word_address < 0x02):
+            print("EPC starts from address 02, you are overwriting PC+CRC.\nProceed? (y/N) ", end="")
+            ans = input()
+            if len(ans) == 0 or ans.lower()[0] != 'y':
+                return
+
+        if len(access_password) != 4:
+            print("Password array must has 4 bytes")
+            return
+
+        if len(data) != word_cnt*2:
+            print("Write data should have 2*word_cnt bytes")
+            return
+
+        command = [WRITE_CMD] + access_password
+        command += [membank, word_address, word_cnt] + data
+        self.ser.write(self.format_command(command))
+        
+        header = uhf.read_output()[0]
+        if header != 0xA0:
+            print("Wrong response header: " + format(header, '#04x'))
+
+        message_length = uhf.read_output()[0]
+        response = uhf.read_output(message_length)
+
+        if message_length == 4:
+            # if response[2] == NO_TAG_ERROR:
+            #     return
+            print(self.get_error_message(response[2]))
+        else:
+            data_length = response[4]
+
+            pc = response[5:7]
+            epc = response[5:5 + data_length - 2]
+            crc = response[5 + data_length - 2:5 + data_length]
+
+            print("Tag count: " + str(response[3]+response[2]))
+            print("PC: " + self.get_hex_string(pc))
+            print("EPC: " + self.get_hex_string(epc))
+            print("CRC: " + self.get_hex_string(crc))
+            print("Write count: " + str(response[-2]))
+            print("Status: " + self.get_error_message(response[-4]))
         
     
     def realtime_inventory(self):
@@ -191,12 +247,17 @@ class UHFReader():
 
 uhf = UHFReader()
 uhf.open_connection()
-# uhf.reset_reader()
+uhf.reset_reader()
+uhf.read_output()
 # uhf.set_beeper_mode(BUZZER_TAG)
+uhf.write_tag(data=[0x00, 0x00, 0x00, 0x00],
+              membank=USER_MEMBANK,
+              word_address=0x01,
+              word_cnt=2)
 
 while True:
-    print("\nPress enter to read tag id...")
+    print("\nPress enter to read tag...")
     input()
 
     # Read 12 words (16 bit each) to get 24 bytes (PC + EPC + CRC not included)
-    uhf.read_tag(membank=TID_MEMBANK, word_address=0x00, word_cnt=TID_MEMBANK_WORD_LIM)
+    uhf.read_tag(membank=USER_MEMBANK, word_address=0x01, word_cnt=4)

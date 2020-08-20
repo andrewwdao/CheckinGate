@@ -1,5 +1,8 @@
 import serial
 
+DEFAULT_BAUDRATE    = 115200
+DEFAULT_SERIAL_PORT = 'COM6'
+
 # Reader commands
 RESET_CMD         = 0x70
 READ_CMD          = 0x81
@@ -23,11 +26,30 @@ HEADER           = 0xA0
 READER_ADDRESS   = 0x01
 PUBLIC_ADDRESS   = 0xFF
 
+# Indexes
+HEADER_INDEX      = 0
+MESSAGE_LEN_INDEX = 1
+
+# Error codes
+COMMAND_SUCCESS      = 0x10
+COMMAND_FAIL         = 0x11
+TAG_INV_ERROR        = 0x31 # Tag inventory error
+TAG_READ_ERROR       = 0x32 # Error reading tag
+TAG_WRITE_ERROR      = 0x33 # Error writing tag
+TAG_LOCK_ERROR       = 0x34 # Error locking tag
+TAG_KILL_ERROR       = 0x35 # Error killing tag
+NO_TAG_ERROR         = 0x36
+BUFFER_EMPTY         = 0x38
+PARAM_INVALID        = 0x41 # Invalid parameter
+WORD_CNT_TOO_LONG    = 0x42 # WordCnt too long
+MEMBANK_OUT_OF_RANGE = 0x43
+LOCK_OUT_OF_RANGE    = 0x44 # Lock region out of range
+
 class UHFReader():
     # Read datasheet for checksum function (written in C)
-    def get_checksum(self, data):
-        cs = 0x00
-        for i in data:
+    def get_checksum(self, arr):
+        cs = 0
+        for i in arr:
             cs += i
             cs %= 256
         
@@ -35,55 +57,108 @@ class UHFReader():
         cs %= 256
         return cs
     
-    def check_packet_checksum(self, bytes_arr):
-        return (self.get_checksum(bytes_arr[:-1]) == bytes_arr[-1])
+    
+    def check_packet_checksum(self, arr):
+        return (self.get_checksum(arr[:-1]) == arr[-1])
 
-    def format_command(self, data):
+    
+    def format_command(self, command):
         # Message length count from third byte, exculuding header and len byte (address -> check)
-        message_length = len(data) + 2
-        data = [HEADER, len(data) + 2, READER_ADDRESS] + data
-        data.append(self.get_checksum(data))
-        return bytearray(data)
+        message_length = len(command) + 2
+        command = [HEADER, len(command) + 2, READER_ADDRESS] + command
+        command.append(self.get_checksum(command))
+        return bytearray(command)
 
-    def get_hex_string(self, bytes_str):
+    
+    def get_hex_string(self, arr):
         hex_str = ''
-        ugly_hex_str = bytes_str.hex()
-        for i in range(len(ugly_hex_str)):
-            hex_str += ugly_hex_str[i]
-            if i%2==1:
-                hex_str += ' '
+        for i in arr:
+            hex_str += format(i, '#04x')[2:] + ' '
         return hex_str.upper()
     
+    
     def get_int_arr(self, bytes_str):
-        hex_arr = []
+        int_arr = []
         hex_str = bytes_str.hex()
         for i in range(0, len(hex_str), 2):
-            hex_arr.append(int(hex_str[i] + hex_str[i+1], 16))
-        return hex_arr
+            int_arr.append(int(hex_str[i] + hex_str[i+1], 16))
+        return int_arr
 
-    def open_connection(self, port, baudrate=115200, timeout=1):
+    def get_error_message(self, error_code):
+        if error_code == COMMAND_SUCCESS:
+            return "COMMAND SUCCESS"
+        if error_code == COMMAND_FAIL:
+            return "COMMAND FAIL"
+        if error_code == TAG_INV_ERROR:
+            return "TAG INVENTORY ERROR"
+        if error_code == TAG_READ_ERROR:
+            return "TAG READ ERROR"
+        if error_code == TAG_WRITE_ERROR:
+            return "TAG WRITE ERROR"
+        if error_code == TAG_LOCK_ERROR:
+            return "TAG LOCK ERROR"
+        if error_code == TAG_KILL_ERROR:
+            return "TAG KILL ERROR"
+        if error_code == NO_TAG_ERROR:
+            return "NO TAG ERROR"
+        if error_code == BUFFER_EMPTY:
+            return "BUFFER EMPTY"
+        if error_code == PARAM_INVALID:
+            return "PARAMETER INVALID"
+        if error_code == WORD_CNT_TOO_LONG:
+            return "WORD CNT TOO LONG"
+        if error_code == MEMBANK_OUT_OF_RANGE:
+            return "MEMBANK OUT OF RANGE"
+        if error_code == LOCK_OUT_OF_RANGE:
+            return "LOCK REGION OUT OF RANGE"
+        return "UNHANLED ERROR"
+
+    
+    def open_connection(self, port=DEFAULT_SERIAL_PORT, baudrate=DEFAULT_BAUDRATE, timeout=1):
         self.ser = serial.Serial(port=port, baudrate=baudrate, timeout=timeout)
         self.ser.close()
         self.ser.open()
     
+    
     def close_connection(self):
         self.ser.close()
 
+    
     def reset_reader(self):
         self.ser.write(self.format_command([RESET_CMD]))
 
-    def read_tag(self, membank=0x02, word_address=0x00, word_cnt=0x01):
+    
+    def read_tag(self, membank=TID_MEMBANK, word_address=0x00, word_cnt=0x01):
         self.ser.write(self.format_command([READ_CMD, membank, word_address, word_cnt]))
+        
+        header = uhf.read_output()[0]
+        if header != 0xA0:
+            print("Wrong response header: " + format(header, '#04x'))
 
+        message_length = uhf.read_output()[0]
+        response = uhf.read_output(message_length)
+
+        if message_length == 4:
+            if response[2] == NO_TAG_ERROR:
+                return
+            print(self.get_error_message(response[2]))
+        else:
+            data_length = response[3]
+            read_length = response[3 + data_length]
+            print(self.get_hex_string(response))
+        
+    
     def realtime_inventory(self):
         repeat = 0x01
         self.ser.write(self.format_command([RT_INVENTORY_CMD, repeat]))
 
+    
     def set_beeper_mode(self, mode):
         self.ser.write(self.format_command([BUZZER_CMD, mode]))
 
+    
     def read_output(self, n_bytes=1):
-        return self.ser.read(n_bytes)
+        return self.get_int_arr(self.ser.read(n_bytes))
 
 
 '''
@@ -93,12 +168,12 @@ class UHFReader():
 '''
 
 uhf = UHFReader()
-uhf.open_connection("COM6")
+uhf.open_connection()
 # uhf.reset_reader()
-# uhf.set_beeper_mode(BUZZER_QUIET)
+# uhf.set_beeper_mode(BUZZER_TAG)
 
 while True: 
-    # uhf.read_tag(membank=TID_MEMBANK, word_address=0x01, word_cnt=0x06)
+    uhf.read_tag(membank=TID_MEMBANK, word_address=0x01, word_cnt=0x06)
     # read_byte = uhf.read_output() # Read header
     # if read_byte != b'\xA0':
     #     continue
@@ -107,7 +182,7 @@ while True:
     # packet_length = int.from_bytes(packet_length, "big")
 
     # line = uhf.read_output(packet_length)
-    line = uhf.read_output(200)
-    if line == b'':
-        continue
-    print(uhf.get_hex_string(line))
+    # line = uhf.read_output(200)
+    # if line == b'':
+    #     continue
+    # print(uhf.get_hex_string(line))

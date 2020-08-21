@@ -1,0 +1,5 @@
+#To send SMS run (using python2):
+python sendSMS.py <phonenumber> <message>
+
+# if you don't have "serial" library! Run code below to install (using pip2):
+pip install pyserial

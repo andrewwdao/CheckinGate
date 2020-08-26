@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-// #include <unistd.h>
+#include <unistd.h>
 // #include <memory.h>
 // #include <stdint.h>
 // #include <sys/time.h>
@@ -14,20 +14,30 @@
 
 int debug = 1;
 
+void send_rabbitmq(int code){
+    char command[100];
+    sprintf(command, "python3 send_to_rabbitmq.py pir %d pir_id:%d &", code, code);
+    system(command);
+}
+
 void pir_1_isr() {
     printf("PIR1\n");
+    send_rabbitmq(1);
 }
 
 void pir_2_isr() {
     printf("PIR2\n");
+    send_rabbitmq(2);
 }
 
 void pir_3_isr() {
+    send_rabbitmq(3);
     printf("PIR3\n");
 }
 
 void pir_4_isr() {
     printf("PIR4\n");
+    send_rabbitmq(4);
 }
 
 void pir_init(int pir_1_pin, int pir_2_pin, int pir_3_pin, int pir_4_pin, int debug_) {

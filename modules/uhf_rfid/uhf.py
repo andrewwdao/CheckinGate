@@ -1,7 +1,9 @@
+from send_to_rabbitmq import Sensor
+
 import serial
 
 DEFAULT_BAUDRATE        = 115200
-DEFAULT_SERIAL_PORT     = 'COM6'
+DEFAULT_SERIAL_PORT     = 'COM8'
 DEFAULT_ACCESS_PASSWORD = [0x00, 0x00, 0x00, 0x00]
 
 # Reader commands
@@ -53,7 +55,6 @@ MEMBANK_OUT_OF_RANGE = 0x43
 LOCK_OUT_OF_RANGE    = 0x44 # Lock region out of range
 
 class UHFReader():
-    
     def get_error_message(self, error_code):
         if error_code == COMMAND_SUCCESS:
             return "COMMAND SUCCESS"
@@ -172,6 +173,8 @@ class UHFReader():
             print("CRC: " + self.get_hex_string(crc))
             print("Read data: " + self.get_hex_string(read_data))
 
+            return self.get_hex_string(read_data)
+
     
     def write_tag(self, data, membank=TID_MEMBANK,
                   access_password=DEFAULT_ACCESS_PASSWORD,
@@ -267,6 +270,8 @@ class UHFReader():
 ===============================
 '''
 
+sensor = Sensor('uhf', '1')
+
 uhf = UHFReader()
 uhf.open_connection()
 uhf.reset_reader()
@@ -278,13 +283,15 @@ uhf.reset_reader()
 #               word_cnt=2)
 # uhf.realtime_inventory_start()
 
-# uhf.read_output()
+uhf.read_output()
 
 while True:
-    uhf.realtime_inventory_start()
-    uhf.read_realtime_inventory()
+    # uhf.realtime_inventory_start()
+    # uhf.read_realtime_inventory()
     # print("\nPress enter to read tag...")
     # input()
 
     # Read 12 words (16 bit each) to get 24 bytes (PC + EPC + CRC not included)
-    # uhf.read_tag(membank=USER_MEMBANK, word_address=0x01, word_cnt=4)
+    tag = uhf.read_tag(membank=TID_MEMBANK, word_address=0x01, word_cnt=4)
+    if tag:
+        sensor.send_message(sensor.format_message('tagid:' + tag.replace(' ', '')))

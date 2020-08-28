@@ -1,12 +1,13 @@
-/*------------------------------------------------------------*-
-  Wiegand Reader - header file
-  Tested with Gwiot 7304D2 RFID Reader(26 bit Wiegand mode) and RASPBERRY PI 3B+
-  (c) Spiros Ioannou 2017
-  (c) Minh-An Dao 2019
-  version 1.10 - 25/10/2019
- --------------------------------------------------------------
+/** ------------------------------------------------------------*-
+ * Wiegand Reader - header file
+ * Tested with Gwiot 7304D2 RFID Reader(26 bit Wiegand mode) and RASPBERRY PI 3B+
+ * (c) Spiros Ioannou 2017
+ * (c) Minh-An Dao 2019-2020
+ * (c) Anh-Khoi Tran 2020
+ * version 2.00 - 28/08/2020
+ *--------------------------------------------------------------
  * RFID reader using Wiegand 26 protocol.
- * Use both 125Khz and 315Mhz Cards
+ * @note Use both 125Khz and 315Mhz Cards
  *
  *  ------ Pinout ------
  *  1(RED)    - VCC     - DC 9-12V
@@ -23,21 +24,18 @@
  * If timeout is reached read code is evaluated for correctness.
  *
  * Wiegand Bits:
- * pFFFFFFFFNNNNNNNNNNNNNNNNP
- * p: even parity of F-bits and leftmost 4 N-bits
+ * EFFFFFFFFNNNNNNNNNNNNNNNNO
+ * E: even parity of F-bits and leftmost 4 N-bits
  * F: Facility code
  * N: Card Number
- * P: odd parity of rightmost 12 N-bits
+ * O: odd parity of rightmost 12 N-bits
  *
- * Usage:
- * ./rfid_main [-d] [-h] [-a] [-0 D0-pin] [-1 D1-pin]
- *  With:
- *  -d : debug mode
- *  -h : help
- *  -a : dumb all received information out
- *  -0 D0-pin: GPIO pin for data0 pulse (wiringPi pin)
- *  -1 D1-pin: GPIO pin for data1 pulse (wiringPi pin)
- *
+ * @ref https://bitbucket.org/sivann/wiegand_rpi/src/0731e6ea733cf80148a519f90135473666f9672c/?at=master
+ *      https://man7.org/linux/man-pages/man2/getitimer.2.html
+ *      https://linux.die.net/man/2/setitimer
+ *      https://pubs.opengroup.org/onlinepubs/009695399/functions/sigemptyset.html
+ *      https://man7.org/linux/man-pages/man2/sigaction.2.html
+ * 
  -------------------------------------------------------------- */
 #ifndef __RFID_WIEGAND_H
 #define __RFID_WIEGAND_H
@@ -48,15 +46,8 @@
 // ------ Public constants ------------------------------------
 
 // ------ Public function prototypes --------------------------
-/**
- * @brief Initialize the whole rfid system including GPIOs, interrupts and handlers
- * @return 0 if succeed, 1 if failed
-*/
 int rfid_init(int,int,int);
-/**
-Show usage information for the user
-*/
-void rfid_showUsage();
+void rfid_showUsage(void);
 // ------ Public variable -------------------------------------
 
 #endif //__RFID_WIEGAND_H

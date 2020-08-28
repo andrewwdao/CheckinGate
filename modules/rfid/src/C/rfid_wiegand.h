@@ -43,21 +43,16 @@
 #define __RFID_WIEGAND_H
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-#include <unistd.h>
-#include <memory.h>
 #include <stdint.h>
-#include <sys/time.h>
-#include <signal.h>
-#include <wiringPi.h>
-
+#include <unistd.h>
 // ------ Public constants ------------------------------------
 
 // ------ Public function prototypes --------------------------
 /**
-Initialize the whole rfid system including GPIOs, interrupts and handlers
+ * @brief Initialize the whole rfid system including GPIOs, interrupts and handlers
+ * @return 0 if succeed, 1 if failed
 */
-void rfid_init(int, int, int, int);
+int rfid_init(int,int,int);
 /**
 Show usage information for the user
 */

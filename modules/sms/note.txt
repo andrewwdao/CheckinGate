@@ -1,5 +1,32 @@
-#To send SMS run (using python2):
-python sendSMS.py <phonenumber> <message>
+# I.First, We need Switch USB 3G Dongle to Serial Modem Mode (only for first-time setup)
+1. Install usb-modeswitch:
+sudo apt-get install usb-modeswitch
 
+2. Create a file at /etc/usb_modeswitch.d/ name 12d1:1f01
+sudo nano /etc/usb_modeswitch.d/12d1:1f01
+
+3. add content below to file:
+TargetVendor=0x12d1
+TargetProduct=0x1f01
+MessageContent="55534243123456780000000000000011062000000100000000000000000000"
+
+4. run command lsusb
+lsusb
+
+5. list device
+ls /dev/tty*
+or
+dmesg | grep tty
+
+6. Hopefully we'll see our new virtual serial ports: ttyUSB0, ttyUSB1 and ttyUSB2! Great!
+
+Link tutorial: https://www.instructables.com/id/Giving-the-Raspberry-Pi-a-Serial-Modem-Using-the-H/
+
+# II. Install library serial
 # if you don't have "serial" library! Run code below to install (using pip2):
 pip install pyserial
+
+
+# II. To send SMS run (using python2):
+python sendSMS.py <phonenumber> <message>
+

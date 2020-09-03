@@ -49,6 +49,7 @@
 #define BAUDRATE         115200
 #define PORT             "/dev/serial0" // /dev/ttyAMA0
 #define ACCESS_PASSWORD  [0x00, 0x00, 0x00, 0x00]
+
 // Reader commands
 #define RESET_CMD          0x70
 #define READ_CMD           0x81
@@ -56,26 +57,32 @@
 #define RT_INVENTORY_CMD   0x89 // Real time inventory
 #define GET_READER_ID_CMD  0x68 // Get reader identifier
 #define BUZZER_CMD         0x7A
+
 // Buzzer modes
 #define BUZZER_QUIET      0x00
 #define BUZZER_ROUND      0x01
 #define BUZZER_TAG        0x02
-// Membank
+
+// Membanks
 #define RESERVED_MEMBANK  0x00
 #define EPC_MEMBANK       0x01
 #define TID_MEMBANK       0x02
 #define USER_MEMBANK      0x03
-// Membank word limit, a word is 2 bytes (16 bit)
+
+// Membank word limits, a word is 2 bytes (16 bit)
 #define EPC_MEMBANK_WORD_LIM   8
 #define TID_MEMBANK_WORD_LIM   12
 #define USER_MEMBANK_WORD_LIM  32
+
 // Needed to format package
-#define HEADER            0xA0
-#define READER_ADDRESS    0x01
-#define PUBLIC_ADDRESS    0xFF
+#define HEADER                    0xA0
+#define DEFAULT_READER_ADDRESS    0x01
+#define PUBLIC_ADDRESS            0xFF
+
 // Indexes
 #define HEADER_INDEX       0
 #define MESSAGE_LEN_INDEX  1
+
 // Error codes
 #define COMMAND_SUCCESS       0x10
 #define COMMAND_FAIL          0x11
@@ -110,7 +117,7 @@ static int word_cnt=0x01;
 uint8_t get_checksum(uint8_t* uBuff, uint8_t uLength)
 {
     uint8_t i, cs = 0;
-    for (i=0; i<uLength; i++) {cs += uBuff[i];}
+    for (i=0; i<uLength; i++) cs += uBuff[i];
     cs = ~cs + 1;
     return cs;
 }
@@ -118,25 +125,42 @@ uint8_t get_checksum(uint8_t* uBuff, uint8_t uLength)
 /**
  *  @brief format command to byte array
  */
-uint8_t format_command(char* arr, uint8_t n)
+uint8_t* format_command(uint8_t* arr, uint8_t* n)
 {
+    *n += 4;
+    // [header, length, reader_address, command, checksum]
+    uint8_t* command = (uint8_t*)malloc(*n);
 
+    uint8_t i = 0;
+    command[i++] = HEADER;
+    command[i++] = *n - 2; // Message length count from third byte
+    command[i++] = DEFAULT_READER_ADDRESS;
+    for (; i < *n; i++) command[i] = arr[i-3];
+    command[i] = get_checksum(arr, i);
+    return command;
 }
 
 /**
  *  @brief reset the reader
  */
-uint8_t __reset_reader() 
+void __reset_reader() 
 {
-    printf("\nReset reader");
+    printf("\nReset reader\n");
     fflush(stdout);
-    serialPutchar(fd, HEADER);
-    serialPutchar(fd, RESET_CMD);
+
+    uint8_t len = 1;
+    uint8_t reset_cmd[] = {RESET_CMD};
+    uint8_t* cmd = format_command(reset_cmd, &len);
+
+    printf("\n");
+    for (uint8_t i = 0; i < len; i++) printf("%02x ", cmd[i]);
+    printf("\n");
+
+    // char reset_cmd[] = {0xA0, 0x03, 0x01, 0x70, 0xEC};
+    // serialPrintf(fd, reset_cmd);
 }
 
-int __set_param(int _membank=TID_MEMBANK,
-                int _word_address=0x00,
-                int _word_cnt=0x01)
+int __set_param(int _membank, int _word_address, int _word_cnt)
 {
     membank = _membank;
     word_address = _word_address;
@@ -168,15 +192,17 @@ int __has_tag()
 */
 int uhf_init(const char* port, int baudrate, int oepin) 
 {
+    printf("\nUHF init\n");
+    fflush(stdout);
     //-------------- Open connection -------------
     /** @brief initialize serial */
-    if ((fd = serialOpen (port, baudrate)) < 0)
+    if ((fd = serialOpen(port, baudrate)) < 0)
     {
         fprintf (stderr, "Unable to open serial device: %s\n", strerror (errno)) ;
         return 1 ;
     }
     /** @brief initialize wiringPi */
-    if (wiringPiSetup () == -1)
+    if (wiringPiSetup() == -1)
     {
         fprintf (stdout, "Unable to start wiringPi: %s\n", strerror (errno)) ;
         return 1 ;

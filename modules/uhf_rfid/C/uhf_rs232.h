@@ -43,8 +43,9 @@
 
 // ------ Public constants ------------------------------------
 // ------ Public function prototypes --------------------------
-int uhf_init(int,int,int);
+int uhf_init(const char*,int,int);
 void uhf_showUsage(void);
+void __reset_reader();
 // ------ Public variable -------------------------------------
 
 #endif //__UHF_RS232_H

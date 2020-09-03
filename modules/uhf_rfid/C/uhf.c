@@ -37,54 +37,56 @@
  *      https://man7.org/linux/man-pages/man2/sigaction.2.html
  * 
  -------------------------------------------------------------- */
-#include "rfid_wiegand.h"
+#include "uhf_rs232.h"
 
 /* Defaults, change with command-line options */
-#define D0_PIN 2  // wiringPi pin
-#define D1_PIN 3  // wiringPi pin
+#define PORT "/dev/serial0"  // wiringPi pin
+#define BAUDRATE 115200  // wiringPi pin
 #define OE_PIN 11 // wiringPi pin - put -1 in if no Enable pin needed.
 
 struct option_s {
-    int d0pin;
-    int d1pin;
+    char* port;
+    int baudrate;
     int oepin;
 } options;
 
 int main(int argc, char *argv[]) {
     /* defaults */
-    options.d0pin = D0_PIN;
-    options.d1pin = D1_PIN;
+    options.port = PORT;
+    options.baudrate = BAUDRATE;
     options.oepin = OE_PIN;
 
     /* Parse Options */
     int opt;
     while ((opt = getopt(argc, argv, "ha0:1:e:")) != -1) {
         switch (opt) {
-        case 'h':
-            rfid_showUsage();
-            exit(0);
-            break;
-        case '0':
-            options.d0pin = atoi(optarg);
-            break;
-        case '1':
-            options.d1pin = atoi(optarg);
-            break;
-        case 'e':
-            options.oepin = atoi(optarg);
-            break;
+        // case 'h':
+        //     uhf_showUsage();
+        //     exit(0);
+        //     break;
+        // case '0':
+        //     options.d0pin = atoi(optarg);
+        //     break;
+        // case '1':
+        //     options.d1pin = atoi(optarg);
+        //     break;
+        // case 'e':
+        //     options.oepin = atoi(optarg);
+        //     break;
         default: /* unknown command */
-            rfid_showUsage();
+            uhf_showUsage();
             exit(0);
         }//end switch case
     }//end while
 
-    rfid_init(options.d0pin,
-              options.d1pin,
+    uhf_init(options.port,
+              options.baudrate,
               options.oepin);
 
-    while (1) {
-        pause(); //pause to wait for ISR and not consuming system memory
-    }//end while
+    __reset_reader();
+
+    // while (1) {
+    //     pause(); //pause to wait for ISR and not consuming system memory
+    // }//end while
 }//end main
 

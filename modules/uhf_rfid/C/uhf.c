@@ -85,8 +85,10 @@ int main(int argc, char *argv[]) {
               options.oepin);
 
     set_param(0x02, 0x01, 11);
-    
+
     while(1) read_tag();
+    
+    // while(1) realtime_inventory();
 
     // while (1) {
     //     pause(); //pause to wait for ISR and not consuming system memory

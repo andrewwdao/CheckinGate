@@ -126,7 +126,7 @@ char __get_checksum(char* uBuff, uint8_t uLength)
 /**
  *  @brief format command to byte array
  */
-const char* format_command(char* arr, uint8_t n)
+const char* __format_command(char* arr, uint8_t n)
 {
     n += 4;
     // [header, length, reader_address, command, checksum]
@@ -139,7 +139,7 @@ const char* format_command(char* arr, uint8_t n)
     for (; i < n - 1; i++) command[i] = arr[i-3];
     command[i] = __get_checksum(command, i);
 
-    // for (int j = 0; j < n; j++) printf("%02x ", command[j]);
+    // for (int j = 0; j < n; j++) printf("%02x ", command[j]); printf("\n"); fflush(stdout);
     return command;
 }
 
@@ -207,7 +207,7 @@ void __reset_reader()
     uint8_t len = 1;
     char reset_cmd[] = {RESET_CMD};
 
-    serialPrintf(fd, format_command(reset_cmd, len));
+    serialPrintf(fd, __format_command(reset_cmd, len));
 }
 
 /**
@@ -218,7 +218,7 @@ char* read_tag()
     // printf("\nRead tag: ");
     uint8_t len = 4;
     char read_cmd[] = {READ_CMD, membank, word_address, word_cnt};
-    serialPrintf(fd, format_command(read_cmd, len));
+    serialPrintf(fd, __format_command(read_cmd, len));
 
     usleep(10000);
     // sleep(1);
@@ -238,14 +238,14 @@ char* read_tag()
             else {
                 uint8_t data_len = res[6];
                 uint8_t read_len = res[7 + data_len];
-                
-                // printf("\nTag count: %d", res[4] + res[5]);
-                // printf("\nPC: %s", __get_hex_string(res, 7, 9));
-                // printf("\nEPC: %s", __get_hex_string(res, 7, 7 + data_len - read_len - 2));
-                // printf("\nCRC: %s", __get_hex_string(res, 7 + data_len - read_len - 2, 7 + data_len - read_len));
-                // printf("\nRead data: %s", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
+
+                // printf("Tag count: %d\n", res[4] + res[5]);
+                // printf("PC: %s\n", __get_hex_string(res, 7, 9));
+                printf("EPC: %s\n", __get_hex_string(res, 7, 7 + data_len - read_len - 2));
+                // printf("CRC: %s\n", __get_hex_string(res, 7 + data_len - read_len - 2, 7 + data_len - read_len));
+                // printf("Read data: %s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
                 // printf("\n");
-                printf("Read data: %s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
+                // printf("Read data: %s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
                 // printf("Read data: %s\n", __get_hex_string(res, 0, res_len));
             }
         }
@@ -253,7 +253,33 @@ char* read_tag()
     }
     
 
-    return "";
+    return "HAHAHA";
+}
+
+void realtime_inventory()
+{
+    char rt_inv_cmd[] = {RT_INVENTORY_CMD, 255};
+    serialPrintf(fd, __format_command(rt_inv_cmd, 2));
+
+    usleep(1000);
+
+    uint8_t res_len;
+    char* res = __read_response_packet(&res_len);
+
+    if (res_len != 0)
+    {
+        if (res_len == 6) printf("Error: 0x%02X\n", res[4]);
+        else
+        {
+            if (__get_checksum(res, res_len-1) != res[res_len - 1]) printf("CHECKSUM FAILED");
+            else {
+                printf("\nPC: %s", __get_hex_string(res, 5, 7));
+                printf("\nEPC: %s", __get_hex_string(res, 7, res_len - 2));
+                // printf("\nRSSI: %s", __get_hex_string(res, res_len - 2, res_len - 1));
+            }
+        }
+        fflush(stdout);
+    }
 }
 
 int set_param(int _membank, int _word_address, int _word_cnt)

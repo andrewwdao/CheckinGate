@@ -1,9 +1,9 @@
-from send_to_rabbitmq import Sensor
+# from send_to_rabbitmq import Sensor
 
 import serial
 
 DEFAULT_BAUDRATE        = 115200
-DEFAULT_SERIAL_PORT     = 'COM8'
+DEFAULT_SERIAL_PORT     = '/dev/serial0'
 DEFAULT_ACCESS_PASSWORD = [0x00, 0x00, 0x00, 0x00]
 
 # Reader commands
@@ -106,6 +106,7 @@ class UHFReader():
         message_length = len(command) + 2
         command = [HEADER, len(command) + 2, READER_ADDRESS] + command
         command.append(self.get_checksum(command))
+        print(self.get_hex_string(command))
         return bytearray(command)
 
     
@@ -270,7 +271,7 @@ class UHFReader():
 ===============================
 '''
 
-sensor = Sensor('uhf', '1')
+# sensor = Sensor('uhf', '1')
 
 uhf = UHFReader()
 uhf.open_connection()
@@ -284,8 +285,9 @@ uhf.reset_reader()
 # uhf.realtime_inventory_start()
 
 uhf.read_output()
+uhf.read_tag(membank=TID_MEMBANK, word_address=0x01, word_cnt=4)
 
-while True:
+while False:
     # uhf.realtime_inventory_start()
     # uhf.read_realtime_inventory()
     # print("\nPress enter to read tag...")

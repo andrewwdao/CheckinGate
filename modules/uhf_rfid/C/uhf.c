@@ -83,7 +83,9 @@ int main(int argc, char *argv[]) {
               options.baudrate,
               options.oepin);
 
-    __reset_reader();
+    __set_param(0x02, 0x01, 11);
+    // __reset_reader();
+    while(1) read_tag();
 
     // while (1) {
     //     pause(); //pause to wait for ISR and not consuming system memory

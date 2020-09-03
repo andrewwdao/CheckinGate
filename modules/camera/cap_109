@@ -7,5 +7,5 @@ ffmpeg -i "rtsp://checkingate:admin123@192.168.1.109:554/cam/realmonitor?channel
 	-frames 10 \
 	-f image2 \
 	-v 0 \
-	img/img_$(date +%s)_%01d_108.jpg \
+	img/img_$(date +%s)_%01d_109.jpg \
 	-y

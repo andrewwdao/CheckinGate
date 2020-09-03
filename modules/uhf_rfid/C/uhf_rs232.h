@@ -46,6 +46,8 @@
 int uhf_init(const char*,int,int);
 void uhf_showUsage(void);
 void __reset_reader();
+int __set_param(int,int,int);
+char* read_tag();
 // ------ Public variable -------------------------------------
 
 #endif //__UHF_RS232_H

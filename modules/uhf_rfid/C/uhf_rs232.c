@@ -114,10 +114,10 @@ static int word_cnt=0x01;
 /**
  *  @brief Read datasheet for checksum function 
  */
-uint8_t get_checksum(uint8_t* uBuff, uint8_t uLength)
+char get_checksum(char* uBuff, uint8_t uLength)
 {
     uint8_t i, cs = 0;
-    for (i=0; i<uLength; i++) cs += uBuff[i];
+    for (i=0; i<uLength; i++) cs = cs + uBuff[i];
     cs = ~cs + 1;
     return cs;
 }
@@ -125,19 +125,50 @@ uint8_t get_checksum(uint8_t* uBuff, uint8_t uLength)
 /**
  *  @brief format command to byte array
  */
-uint8_t* format_command(uint8_t* arr, uint8_t* n)
+const char* format_command(char* arr, uint8_t n)
 {
-    *n += 4;
+    n += 4;
     // [header, length, reader_address, command, checksum]
-    uint8_t* command = (uint8_t*)malloc(*n);
+    char* command = malloc(n);
 
     uint8_t i = 0;
     command[i++] = HEADER;
-    command[i++] = *n - 2; // Message length count from third byte
+    command[i++] = n - 2; // Message length count from third byte
     command[i++] = DEFAULT_READER_ADDRESS;
-    for (; i < *n; i++) command[i] = arr[i-3];
-    command[i] = get_checksum(arr, i);
+    for (; i < n - 1; i++) command[i] = arr[i-3];
+    command[i] = get_checksum(command, i);
+
+    // for (int j = 0; j < n; j++) printf("%02x ", command[j]);
     return command;
+}
+
+char* get_hex_string(char* arr, uint8_t s, uint8_t e)
+{
+    char* str = malloc((e-s)*3 + 1);
+    char* end_of_str = str;
+
+    for (uint8_t i = s; i < e; i++)
+        end_of_str += sprintf(end_of_str, "%02X ", arr[i]);
+
+    *end_of_str = '\0';
+    return str;
+}
+
+/**
+ * @brief Read the whole packet
+ * @return 
+ */
+char* __read_response_packet(uint8_t* res_len)
+{
+    *res_len = serialDataAvail(fd);
+    char* data = malloc(*res_len);
+    for (uint8_t i = 0; i < *res_len; i++) data[i] = serialGetchar(fd);
+
+    if (*res_len == 0) printf("\nNo response");
+    else if (data[0] != HEADER)
+        printf("\nWarning (__read_response_packet): %02X is not packet header", data[0]);
+
+    return data;
 }
 
 /**
@@ -145,19 +176,51 @@ uint8_t* format_command(uint8_t* arr, uint8_t* n)
  */
 void __reset_reader() 
 {
-    printf("\nReset reader\n");
+    // A0 03 01 70 EC
+
+    printf("\nReset reader: ");
     fflush(stdout);
 
     uint8_t len = 1;
-    uint8_t reset_cmd[] = {RESET_CMD};
-    uint8_t* cmd = format_command(reset_cmd, &len);
+    char reset_cmd[] = {RESET_CMD};
 
-    printf("\n");
-    for (uint8_t i = 0; i < len; i++) printf("%02x ", cmd[i]);
-    printf("\n");
+    serialPrintf(fd, format_command(reset_cmd, len));
+}
 
-    // char reset_cmd[] = {0xA0, 0x03, 0x01, 0x70, 0xEC};
-    // serialPrintf(fd, reset_cmd);
+/**
+ * @brief read tag
+ */
+char* read_tag()
+{
+    // printf("\nRead tag: ");
+    uint8_t len = 4;
+    char read_cmd[] = {READ_CMD, membank, word_address, word_cnt};
+    serialPrintf(fd, format_command(read_cmd, len));
+
+    // usleep(1000);
+    sleep(1);
+    uint8_t res_len;
+    char* res = __read_response_packet(&res_len);
+
+    // printf("\n");
+    // print_hex_string(res, 0, res_len);
+
+    if (res_len == 6) printf("\nError: 0x%02X", res[4]);
+    else if (res_len != 0)
+    {
+        uint8_t data_len = res[6];
+        uint8_t read_len = res[7 + data_len];
+
+        // printf("\nTag count: %d", res[4] + res[5]);
+        // printf("\nPC: %s", get_hex_string(res, 7, 9));
+        // printf("\nEPC: %s", get_hex_string(res, 7, 7 + data_len - read_len - 2));
+        // printf("\nCRC: %s", get_hex_string(res, 7 + data_len - read_len - 2, 7 + data_len - read_len));
+        // printf("\nRead data: %s", get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
+        // printf("\n");
+        printf("TID: %s\n", get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
+    }
+
+    return "";
 }
 
 int __set_param(int _membank, int _word_address, int _word_cnt)
@@ -173,14 +236,12 @@ int __set_param(int _membank, int _word_address, int _word_cnt)
             printf("\nMembank word limit exceeded. (TID 12 words, EPC 8 words, USER 32 words)");
             return -1;
         }
+    return 0;
 }
-int __has_tag()
-{
-    char dat[] = {READ_CMD, membank, word_address, word_cnt};
-
-            
-
-}
+// int __has_tag()
+// {
+//     char dat[] = {READ_CMD, membank, word_address, word_cnt};
+// }
 //--------------------------------------------------------------
 /**
  * @brief Initialize the whole uhf system including GPIOs, interrupts and handlers
@@ -211,7 +272,7 @@ int uhf_init(const char* port, int baudrate, int oepin)
     if (oepin>0) {
         pinMode(oepin, OUTPUT);
         digitalWrite(oepin, LOW);
-        sleep(0.3);
+        // sleep(0.3);
         digitalWrite(oepin, HIGH);
     }
 

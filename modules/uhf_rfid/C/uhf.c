@@ -37,6 +37,7 @@
  *      https://man7.org/linux/man-pages/man2/sigaction.2.html
  * 
  -------------------------------------------------------------- */
+#include <pthread.h>
 #include "uhf_rs232.h"
 
 /* Defaults, change with command-line options */
@@ -83,8 +84,8 @@ int main(int argc, char *argv[]) {
               options.baudrate,
               options.oepin);
 
-    __set_param(0x02, 0x01, 11);
-    // __reset_reader();
+    set_param(0x02, 0x01, 11);
+    
     while(1) read_tag();
 
     // while (1) {

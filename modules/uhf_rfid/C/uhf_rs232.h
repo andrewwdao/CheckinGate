@@ -37,7 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <unistd.h>
+#include <unistd.h> //sleep, usleep
 #include <errno.h>
 #include <string.h>
 
@@ -45,8 +45,7 @@
 // ------ Public function prototypes --------------------------
 int uhf_init(const char*,int,int);
 void uhf_showUsage(void);
-void __reset_reader();
-int __set_param(int,int,int);
+int set_param(int,int,int);
 char* read_tag();
 // ------ Public variable -------------------------------------
 

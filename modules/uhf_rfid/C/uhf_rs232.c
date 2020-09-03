@@ -41,6 +41,7 @@
 #define __UHF_RS232_C
 #include <sys/time.h>
 #include <signal.h>
+#include <pthread.h>
 #include <wiringPi.h>
 #include <wiringSerial.h>
 #include "uhf_rs232.h"
@@ -114,7 +115,7 @@ static int word_cnt=0x01;
 /**
  *  @brief Read datasheet for checksum function 
  */
-char get_checksum(char* uBuff, uint8_t uLength)
+char __get_checksum(char* uBuff, uint8_t uLength)
 {
     uint8_t i, cs = 0;
     for (i=0; i<uLength; i++) cs = cs + uBuff[i];
@@ -136,13 +137,18 @@ const char* format_command(char* arr, uint8_t n)
     command[i++] = n - 2; // Message length count from third byte
     command[i++] = DEFAULT_READER_ADDRESS;
     for (; i < n - 1; i++) command[i] = arr[i-3];
-    command[i] = get_checksum(command, i);
+    command[i] = __get_checksum(command, i);
 
     // for (int j = 0; j < n; j++) printf("%02x ", command[j]);
     return command;
 }
 
-char* get_hex_string(char* arr, uint8_t s, uint8_t e)
+/**
+ * @brief Generate hex string from array
+ * @param arr Data
+ *
+ */
+char* __get_hex_string(char* arr, uint8_t s, uint8_t e)
 {
     char* str = malloc((e-s)*3 + 1);
     char* end_of_str = str;
@@ -158,17 +164,35 @@ char* get_hex_string(char* arr, uint8_t s, uint8_t e)
  * @brief Read the whole packet
  * @return 
  */
-char* __read_response_packet(uint8_t* res_len)
+char* __read_response_packet(uint8_t* packet_len)
 {
-    *res_len = serialDataAvail(fd);
-    char* data = malloc(*res_len);
-    for (uint8_t i = 0; i < *res_len; i++) data[i] = serialGetchar(fd);
+    if (serialDataAvail(fd)) {
+        char header = serialGetchar(fd);
+        if (header != HEADER)
+            printf("\nWarning (__read_response_packet): %02X is not packet header", header);
 
-    if (*res_len == 0) printf("\nNo response");
-    else if (data[0] != HEADER)
-        printf("\nWarning (__read_response_packet): %02X is not packet header", data[0]);
+        *packet_len = serialGetchar(fd);
 
-    return data;
+        char* data = malloc(*packet_len + 2);
+
+        data[0] = header;
+        data[1] = *packet_len;
+        for (uint8_t i = 0; i < *packet_len; i++)
+            data[i+2] = serialGetchar(fd);
+        
+        *packet_len += 2;
+        return data;
+    }
+
+    // *res_len = serialDataAvail(fd);
+    // for (uint8_t i = 0; i < *res_len; i++) data[i] = serialGetchar(fd);
+
+    // if (*res_len == 0) printf("\nNo response");
+    // else if (data[0] != HEADER)
+    //     printf("\nWarning (__read_response_packet): %02X is not packet header", data[0]);
+
+    *packet_len = 0;
+    return "";
 }
 
 /**
@@ -177,9 +201,8 @@ char* __read_response_packet(uint8_t* res_len)
 void __reset_reader() 
 {
     // A0 03 01 70 EC
-
-    printf("\nReset reader: ");
-    fflush(stdout);
+    // printf("\nReset reader: ");
+    // fflush(stdout);
 
     uint8_t len = 1;
     char reset_cmd[] = {RESET_CMD};
@@ -188,7 +211,7 @@ void __reset_reader()
 }
 
 /**
- * @brief read tag
+ * @brief Read tag
  */
 char* read_tag()
 {
@@ -197,33 +220,43 @@ char* read_tag()
     char read_cmd[] = {READ_CMD, membank, word_address, word_cnt};
     serialPrintf(fd, format_command(read_cmd, len));
 
-    // usleep(1000);
-    sleep(1);
+    usleep(10000);
+    // sleep(1);
+
     uint8_t res_len;
     char* res = __read_response_packet(&res_len);
 
     // printf("\n");
     // print_hex_string(res, 0, res_len);
 
-    if (res_len == 6) printf("\nError: 0x%02X", res[4]);
-    else if (res_len != 0)
+    if (res_len != 0)
     {
-        uint8_t data_len = res[6];
-        uint8_t read_len = res[7 + data_len];
-
-        // printf("\nTag count: %d", res[4] + res[5]);
-        // printf("\nPC: %s", get_hex_string(res, 7, 9));
-        // printf("\nEPC: %s", get_hex_string(res, 7, 7 + data_len - read_len - 2));
-        // printf("\nCRC: %s", get_hex_string(res, 7 + data_len - read_len - 2, 7 + data_len - read_len));
-        // printf("\nRead data: %s", get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
-        // printf("\n");
-        printf("TID: %s\n", get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
+        if (res_len == 6) printf("Error: 0x%02X\n", res[4]);
+        else
+        {
+            if (__get_checksum(res, res_len-1) != res[res_len - 1]) printf("CHECKSUM FAILED");
+            else {
+                uint8_t data_len = res[6];
+                uint8_t read_len = res[7 + data_len];
+                
+                // printf("\nTag count: %d", res[4] + res[5]);
+                // printf("\nPC: %s", __get_hex_string(res, 7, 9));
+                // printf("\nEPC: %s", __get_hex_string(res, 7, 7 + data_len - read_len - 2));
+                // printf("\nCRC: %s", __get_hex_string(res, 7 + data_len - read_len - 2, 7 + data_len - read_len));
+                // printf("\nRead data: %s", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
+                // printf("\n");
+                printf("Read data: %s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
+                // printf("Read data: %s\n", __get_hex_string(res, 0, res_len));
+            }
+        }
+        fflush(stdout);
     }
+    
 
     return "";
 }
 
-int __set_param(int _membank, int _word_address, int _word_cnt)
+int set_param(int _membank, int _word_address, int _word_cnt)
 {
     membank = _membank;
     word_address = _word_address;
@@ -276,6 +309,7 @@ int uhf_init(const char* port, int baudrate, int oepin)
         digitalWrite(oepin, HIGH);
     }
 
+    __reset_reader();
 
     return 0;
 }//end uhf_init

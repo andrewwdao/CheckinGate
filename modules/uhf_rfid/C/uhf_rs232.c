@@ -44,9 +44,9 @@
 #include <pthread.h>
 #include <wiringPi.h>
 #include <wiringSerial.h>
-#include <unistd.h> //sleep, usleep
+#include <errno.h> //errno
+#include <string.h> //strerror
 #include "uhf_rs232.h"
-
 // ------ Private constants -----------------------------------
 #define BAUDRATE         115200
 #define PORT             "/dev/serial0" // /dev/ttyAMA0

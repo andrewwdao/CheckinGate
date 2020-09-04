@@ -37,8 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-// #include <errno.h>
-
+#include <unistd.h> //sleep, usleep, getopt
 // ------ Public constants ------------------------------------
 // ------ Public function prototypes --------------------------
 uint8_t uhf_init(const char*,uint32_t,uint8_t);

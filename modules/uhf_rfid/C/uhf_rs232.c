@@ -240,13 +240,13 @@ char* read_tag()
                 uint8_t read_len = res[7 + data_len];
 
                 // printf("Tag count: %d\n", res[4] + res[5]);
-                // printf("PC: %s\n", __get_hex_string(res, 7, 9));
-                printf("EPC: %s\n", __get_hex_string(res, 7, 7 + data_len - read_len - 2));
-                // printf("CRC: %s\n", __get_hex_string(res, 7 + data_len - read_len - 2, 7 + data_len - read_len));
+                printf("PC: %s\n", __get_hex_string(res, 7, 9));
+                printf("EPC: %s\n", __get_hex_string(res, 9, 7 + data_len - read_len - 2));
+                printf("CRC: %s\n", __get_hex_string(res, 7 + data_len - read_len - 2, 7 + data_len - read_len));
                 // printf("Read data: %s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
                 // printf("\n");
                 // printf("Read data: %s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
-                // printf("Read data: %s\n", __get_hex_string(res, 0, res_len));
+                printf("Read data: %s\n", __get_hex_string(res, 0, res_len));
             }
         }
         fflush(stdout);

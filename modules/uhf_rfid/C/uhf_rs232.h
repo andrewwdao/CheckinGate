@@ -37,17 +37,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <unistd.h> //sleep, usleep
-#include <errno.h>
-#include <string.h>
+// #include <errno.h>
 
 // ------ Public constants ------------------------------------
 // ------ Public function prototypes --------------------------
-int uhf_init(const char*,int,int);
+uint8_t uhf_init(const char*,uint32_t,uint8_t);
 void uhf_showUsage(void);
-int set_param(int,int,int);
+uint8_t set_param(uint8_t,uint8_t,uint8_t);
 char* read_tag();
-void realtime_inventory();
+char* realtime_inventory();
 // ------ Public variable -------------------------------------
 
 #endif //__UHF_RS232_H

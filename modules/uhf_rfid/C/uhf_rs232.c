@@ -44,6 +44,7 @@
 #include <pthread.h>
 #include <wiringPi.h>
 #include <wiringSerial.h>
+#include <unistd.h> //sleep, usleep
 #include "uhf_rs232.h"
 
 // ------ Private constants -----------------------------------
@@ -132,13 +133,13 @@ const char* __format_command(char* arr, uint8_t n)
     // [header, length, reader_address, command, checksum]
     char* command = malloc(n);
 
-    uint8_t i = 0;
-    command[i++] = HEADER;
-    command[i++] = n - 2; // Message length count from third byte
-    command[i++] = DEFAULT_READER_ADDRESS;
+    command[0] = HEADER;
+    command[1] = n - 2; // Message length count from third byte
+    command[2] = DEFAULT_READER_ADDRESS;
+    uint8_t i = 3;
     for (; i < n - 1; i++) command[i] = arr[i-3];
     command[i] = __get_checksum(command, i);
-
+    //--- debug
     // for (int j = 0; j < n; j++) printf("%02x ", command[j]); printf("\n"); fflush(stdout);
     return command;
 }
@@ -174,23 +175,14 @@ char* __read_response_packet(uint8_t* packet_len)
         *packet_len = serialGetchar(fd);
 
         char* data = malloc(*packet_len + 2);
-
         data[0] = header;
         data[1] = *packet_len;
         for (uint8_t i = 0; i < *packet_len; i++)
             data[i+2] = serialGetchar(fd);
         
-        *packet_len += 2;
+        *packet_len += 2; // return the full package length including header and package len itself
         return data;
     }
-
-    // *res_len = serialDataAvail(fd);
-    // for (uint8_t i = 0; i < *res_len; i++) data[i] = serialGetchar(fd);
-
-    // if (*res_len == 0) printf("\nNo response");
-    // else if (data[0] != HEADER)
-    //     printf("\nWarning (__read_response_packet): %02X is not packet header", data[0]);
-
     *packet_len = 0;
     return "";
 }
@@ -200,13 +192,8 @@ char* __read_response_packet(uint8_t* packet_len)
  */
 void __reset_reader() 
 {
-    // A0 03 01 70 EC
-    // printf("\nReset reader: ");
-    // fflush(stdout);
-
     uint8_t len = 1;
     char reset_cmd[] = {RESET_CMD};
-
     serialPrintf(fd, __format_command(reset_cmd, len));
 }
 
@@ -220,12 +207,12 @@ char* read_tag()
     char read_cmd[] = {READ_CMD, membank, word_address, word_cnt};
     serialPrintf(fd, __format_command(read_cmd, len));
 
-    usleep(10000);
-    // sleep(1);
+    usleep(10000); // us
 
     uint8_t res_len;
     char* res = __read_response_packet(&res_len);
-
+    
+    // ---debug 
     // printf("\n");
     // print_hex_string(res, 0, res_len);
 
@@ -243,20 +230,18 @@ char* read_tag()
                 // printf("PC: %s\n", __get_hex_string(res, 7, 9));
                 // printf("EPC: %s\n", __get_hex_string(res, 9, 7 + data_len - read_len - 2));
                 // printf("CRC: %s\n", __get_hex_string(res, 7 + data_len - read_len - 2, 7 + data_len - read_len));
-                // printf("Read data: %s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
-                // printf("\n");
+                // printf("Full package: %s\n", __get_hex_string(res, 0, res_len));
                 printf("Read data: %s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
-                // printf("Read data: %s\n", __get_hex_string(res, 0, res_len));
+                fflush(stdout);
+                return __get_hex_string(res, 7 + data_len - read_len, 7 + data_len);
             }
         }
-        fflush(stdout);
     }
-    
-
-    return "HAHAHA";
+    fflush(stdout);
+    return "ERR";
 }
 
-void realtime_inventory()
+char* realtime_inventory()
 {
     char rt_inv_cmd[] = {RT_INVENTORY_CMD, 255};
     serialPrintf(fd, __format_command(rt_inv_cmd, 2));
@@ -273,16 +258,19 @@ void realtime_inventory()
         {
             if (__get_checksum(res, res_len-1) != res[res_len - 1]) printf("CHECKSUM FAILED");
             else {
-                printf("\nPC: %s", __get_hex_string(res, 5, 7));
-                printf("\nEPC: %s", __get_hex_string(res, 7, res_len - 2));
+                // printf("\nPC: %s", __get_hex_string(res, 5, 7));
                 // printf("\nRSSI: %s", __get_hex_string(res, res_len - 2, res_len - 1));
+                printf("\nEPC: %s", __get_hex_string(res, 7, res_len - 2));
+                fflush(stdout);
+                return __get_hex_string(res, 7, res_len - 2);
             }
         }
-        fflush(stdout);
     }
+    fflush(stdout);
+    return "ERR";
 }
 
-int set_param(int _membank, int _word_address, int _word_cnt)
+uint8_t set_param(uint8_t _membank, uint8_t _word_address, uint8_t _word_cnt)
 {
     membank = _membank;
     word_address = _word_address;
@@ -293,26 +281,22 @@ int set_param(int _membank, int _word_address, int _word_cnt)
         ((membank == USER_MEMBANK) && ((word_address + word_cnt) > USER_MEMBANK_WORD_LIM)))
         {
             printf("\nMembank word limit exceeded. (TID 12 words, EPC 8 words, USER 32 words)");
-            return -1;
+            return 1;
         }
     return 0;
 }
-// int __has_tag()
-// {
-//     char dat[] = {READ_CMD, membank, word_address, word_cnt};
-// }
 //--------------------------------------------------------------
 /**
  * @brief Initialize the whole uhf system including GPIOs, interrupts and handlers
  * @return 0 if succeed, 1 if failed
- * @param d0pin: DATA0 pin from wiegand protocol
- * @param d1pin: DATA1 pin from wiegand protocol
+ * @param port: port defines for rs232 connection
+ * @param baudrate: baudrate speed
  * @param oepin: Enable pin for logic converter TXS0108E
  *               put -1 if used MOSFET converter
 */
-int uhf_init(const char* port, int baudrate, int oepin) 
+uint8_t uhf_init(const char* port, uint32_t baudrate, uint8_t oepin) 
 {
-    printf("\nUHF init\n");
+    printf("\nInit UHF RFID reader...\n");
     fflush(stdout);
     //-------------- Open connection -------------
     /** @brief initialize serial */
@@ -331,8 +315,7 @@ int uhf_init(const char* port, int baudrate, int oepin)
     if (oepin>0) {
         pinMode(oepin, OUTPUT);
         digitalWrite(oepin, LOW);
-        // sleep(0.3);
-        digitalWrite(oepin, HIGH);
+        digitalWrite(oepin, HIGH); //set it low to high to make it works
     }
 
     serialFlush(fd);
@@ -349,11 +332,11 @@ void uhf_showUsage()
 {
     printf("\nHow to use:\n");
     printf("Type in the command line:\n");
-    printf("\n\t./uhf_main [-h] [-0 D0-pin] [-1 D1-pin] [-e OE-pin]\n\n");
+    printf("\n\t./uhf [-h] [-p port] [-b baudrate] [-e OE-pin]\n\n");
     printf("With:\n");
     printf("\t-h : help\n");
-    printf("\t-0 D0-pin: GPIO pin for data0 pulse (wiringPi pin)\n");
-    printf("\t-1 D1-pin: GPIO pin for data1 pulse (wiringPi pin)\n");
+    printf("\t-p port: port defines for rs232 connection\n");
+    printf("\t-b baudrate: baudrate speed\n");
     printf("\t-e OE-pin: GPIO pin for output enable pin (wiringPi pin)\n\n");
     fflush(stdout);
 }//end uhf_showUsage

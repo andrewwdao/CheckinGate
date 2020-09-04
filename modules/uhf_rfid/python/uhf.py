@@ -1,9 +1,9 @@
-from send_to_rabbitmq import Sensor
+# from send_to_rabbitmq import Sensor
 
 import serial
 
 DEFAULT_BAUDRATE        = 115200
-DEFAULT_SERIAL_PORT     = 'COM8'
+DEFAULT_SERIAL_PORT     = '/dev/serial0'
 DEFAULT_ACCESS_PASSWORD = [0x00, 0x00, 0x00, 0x00]
 
 # Reader commands
@@ -106,6 +106,7 @@ class UHFReader():
         message_length = len(command) + 2
         command = [HEADER, len(command) + 2, READER_ADDRESS] + command
         command.append(self.get_checksum(command))
+        print(self.get_hex_string(command))
         return bytearray(command)
 
     
@@ -167,7 +168,7 @@ class UHFReader():
             crc = response[5 + data_length - read_length - 2:5 + data_length - read_length]
             read_data = response[5 + data_length - read_length:5 + data_length]
 
-            print("Tag count: " + str(response[3]+response[2]))
+            # print("Tag count: " + str(response[3]+response[2]))
             print("PC: " + self.get_hex_string(pc))
             print("EPC: " + self.get_hex_string(epc))
             print("CRC: " + self.get_hex_string(crc))
@@ -270,7 +271,7 @@ class UHFReader():
 ===============================
 '''
 
-sensor = Sensor('uhf', '1')
+# sensor = Sensor('uhf', '1')
 
 uhf = UHFReader()
 uhf.open_connection()
@@ -284,6 +285,7 @@ uhf.reset_reader()
 # uhf.realtime_inventory_start()
 
 uhf.read_output()
+# uhf.read_tag(membank=TID_MEMBANK, word_address=0x01, word_cnt=11)
 
 while True:
     # uhf.realtime_inventory_start()
@@ -292,6 +294,6 @@ while True:
     # input()
 
     # Read 12 words (16 bit each) to get 24 bytes (PC + EPC + CRC not included)
-    tag = uhf.read_tag(membank=TID_MEMBANK, word_address=0x01, word_cnt=4)
-    if tag:
-        sensor.send_message(sensor.format_message('tagid:' + tag.replace(' ', '')))
+    tag = uhf.read_tag(membank=TID_MEMBANK, word_address=0x01, word_cnt=11)
+    # if tag:
+    #     sensor.send_message(sensor.format_message('tagid:' + tag.replace(' ', '')))

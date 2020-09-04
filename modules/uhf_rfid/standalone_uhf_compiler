@@ -1,0 +1,106 @@
+#!/bin/bash
+
+set -u -o pipefail # fail on error , debug all lines
+
+if [ 'root' != $( whoami ) ] ; then
+  echo "Please run as root! ( sudo ${0} )"
+  exit 1;
+fi
+
+trap 'interrupt' 2 # signal 2 is SIGINT, run interrupt function if get intterupted
+trap 'handleError' ERR # ERR is one of the signal specifications implemented internally by bash. Another way: if [ $? != 0 ]; then handleError; fi
+
+BASEDIR=$(pwd)
+CDIR=C/obj
+
+cleanup() { # at the main folder
+    echo "Cleaning up..."
+    cd $BASEDIR
+	[ -d "$CDIR" ] && ( rm -rf $CDIR && echo "C temporary directory existed. Removing..." )
+    trap - 2 # remove trap
+    trap - ERR # remove trap
+}
+
+interrupt() {
+	echo
+	echo
+    echo "INTERRUPTED!"
+    echo
+    cleanup
+    exit 1
+}
+
+handleError() {
+    echo
+    echo "==================="
+	echo "       ERROR       "
+    echo "==================="
+    echo
+    cleanup
+    echo
+    echo "----- ABORTED -----"
+    exit 1
+}
+
+installPrequisites() {
+    # disable bluetooth
+    $BASEDIR/bluetooth_disabler
+    # update packages
+    apt-get update
+    apt-get upgrade -y
+    # pip installation
+    apt-get install python3-pip -y
+    # git installation
+    apt-get install wget git -y
+    # WiringPi  ## http://wiringpi.com/
+    apt-get install wiringpi -y
+    # enable uart
+    if [ 0 -eq $( grep -c 'enable_uart = 1' /boot/config.txt ) ]; then # check if the phrase "enable_uart = 1" existed in the file or not
+        echo "enable_uart = 1" | tee -a /boot/config.txt
+    fi
+}
+
+cleanup
+
+#=========================== Install prequisites =====================================
+echo "Install prequisites? [Y/N]"
+read input
+
+if [ $input == "y" ] || [ $input == "Y" ]; then
+	{installPrequisites}
+fi
+
+
+#=========================== C complier =====================================
+echo "Creating temporary directory for C... "
+mkdir $CDIR
+cd $CDIR
+cd ..
+
+echo "Making UHF rfid binaries executable"
+make clean
+make uhf
+
+chmod +x uhf
+mv uhf $BASEDIR
+
+echo
+echo
+echo "Done C binaries"
+echo
+cd $BASEDIR
+
+##########################################################
+cleanup
+
+trap - 2 # remove trap
+trap - ERR # remove trap
+
+echo "========================="
+echo "    BUILD SUCCESSFUL     "
+echo "========================="
+echo "To run service for uhf, use command:"
+echo "    \"uhf\""
+echo "========================="
+echo "          DONE!          "
+echo "========================="

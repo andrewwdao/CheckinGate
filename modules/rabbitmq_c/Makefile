@@ -1,25 +1,22 @@
 TARGET=test_send
-HEADERS=libs
-DEPS_DIR=librabbitmq
-DEPS=amqp_api.o amqp_connection.o amqp_mem.o amqp_socket.o amqp_table.o amqp_tcp_socket.o amqp_time.o amqp_consumer.o
 
-$(TARGET): $(TARGET).o librabbitmq.a
-	gcc -I$(HEADERS) -o $@ $(TARGET).o -L. -lrabbitmq
+OBJ_DIR=obj
 
-$(TARGET).o: $(TARGET).c
-	gcc -I$(HEADERS) -c $^
+DEPS_DIR=libs
+DEPS_=amqp_api amqp_connection amqp_mem amqp_socket amqp_table amqp_tcp_socket amqp_time
+DEPS=$(DEPS_:%=$(OBJ_DIR)/%.o)
 
-librabbitmq.a: $(DEPS) amqp_framing.o
+$(TARGET): $(OBJ_DIR)/$(TARGET).o $(OBJ_DIR)/librabbitmq.a
+	gcc -I$(DEPS_DIR) -o $@ $(OBJ_DIR)/$(TARGET).o -L$(OBJ_DIR) -lrabbitmq
+
+$(OBJ_DIR)/librabbitmq.a: $(DEPS) $(OBJ_DIR)/amqp_framing.o
 	ar rcs $@ $^
 
-amqp_framing.o: $(DEPS_DIR)/amqp_framing.c
-	gcc -Ilibs -c $(DEPS_DIR)/amqp_framing.c
+$(OBJ_DIR)/%.o: $(DEPS_DIR)/%.c
+	gcc -I$(DEPS_DIR) -c $^ -o$@
 
-%.o: $(DEPS_DIR)/%.c $(DEPS_DIR)/%.h
-	gcc -I$(HEADERS) -c $^
-
-%.o: $(DEPS_DIR)/%.c
-	gcc -I$(HEADERS) -c $^
+$(OBJ_DIR)/%.o: %.c
+	gcc -I$(DEPS_DIR) -c $^ -o$@
 
 clean:
-	rm -rf *.o *.a $(TARGET)
+	rm -rf $(OBJ_DIR)/*.o $(OBJ_DIR)/*.a $(TARGET)

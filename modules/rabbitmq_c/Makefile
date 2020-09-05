@@ -1,3 +1,6 @@
+# https://stackoverflow.com/questions/2734719/how-to-compile-a-static-library-in-linux
+# https://www.geeksforgeeks.org/static-vs-dynamic-libraries/
+
 TARGET=test_send
 
 OBJ_DIR=obj
@@ -9,12 +12,15 @@ DEPS=$(DEPS_:%=$(OBJ_DIR)/%.o)
 $(TARGET): $(OBJ_DIR)/$(TARGET).o $(OBJ_DIR)/librabbitmq.a
 	gcc -I$(DEPS_DIR) -o $@ $(OBJ_DIR)/$(TARGET).o -L$(OBJ_DIR) -lrabbitmq
 
+# Build static library from object files
 $(OBJ_DIR)/librabbitmq.a: $(DEPS) $(OBJ_DIR)/amqp_framing.o
 	ar rcs $@ $^
 
+# Build object files from source files
 $(OBJ_DIR)/%.o: $(DEPS_DIR)/%.c
 	gcc -I$(DEPS_DIR) -c $^ -o$@
 
+# Build object file for main target
 $(OBJ_DIR)/%.o: %.c
 	gcc -I$(DEPS_DIR) -c $^ -o$@
 

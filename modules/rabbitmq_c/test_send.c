@@ -14,12 +14,29 @@ int main() {
 	amqp_socket_t *socket = NULL;
 	amqp_connection_state_t conn;
 
+	printf("Creating new connection\n");
 	conn = amqp_new_connection();
-	socket = amqp_tcp_socket_new(conn);
-	status = amqp_socket_open(socket, hostname, port);
 
+	printf("Creating TCP socket\n");
+	socket = amqp_tcp_socket_new(conn);
+	if (!socket) {
+		printf("Problem creating TCP socket\n");
+		return 1;
+	}
+
+	printf("Opening TCP socket\n");
+	status = amqp_socket_open(socket, hostname, port);
+	if (status) {
+		printf("Problem opening TCP socket\n");
+		return 1;
+	}
+
+	printf("Logging in\n");
 	amqp_login(conn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN,"admin", "admin");
+
+	printf("Opening channel");
 	amqp_channel_open(conn, 1);
+	printf("...\n");
 	amqp_get_rpc_reply(conn);
 
 
@@ -34,6 +51,8 @@ int main() {
 	amqp_channel_close(conn, 1, AMQP_REPLY_SUCCESS);
 	amqp_connection_close(conn, AMQP_REPLY_SUCCESS);
 	amqp_destroy_connection(conn);
+
+	printf("Sent\n");
 
 	return 0;
 }

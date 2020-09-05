@@ -1,5 +1,6 @@
 # https://stackoverflow.com/questions/2734719/how-to-compile-a-static-library-in-linux
 # https://www.geeksforgeeks.org/static-vs-dynamic-libraries/
+# https://www.rapidtables.com/code/linux/gcc/gcc-l.html
 
 TARGET=test_send
 

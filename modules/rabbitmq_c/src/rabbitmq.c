@@ -32,8 +32,6 @@ int rabbitmq_init(const char* hostname, const char* username, const char* passwo
 	props->content_type = amqp_cstring_bytes("text/plain");
     props->delivery_mode = 2; /* persistent delivery mode */
 
-	printf("Init rabbitmq\n");
-
 	return 0;
 }
 

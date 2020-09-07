@@ -241,7 +241,7 @@ char* uhf_read_tag()
                 // printf("EPC: %s\n", __get_hex_string(res, 9, 7 + data_len - read_len - 2));
                 // printf("CRC: %s\n", __get_hex_string(res, 7 + data_len - read_len - 2, 7 + data_len - read_len));
                 // printf("Full package: %s\n", __get_hex_string(res, 0, res_len));
-                printf("Read data: %s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
+                printf("UHF Read data: %s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
                 fflush(stdout);
                 return __get_hex_string(res, 7 + data_len - read_len, 7 + data_len);
             }
@@ -272,7 +272,7 @@ char* uhf_realtime_inventory()
                 // printf("\nPC: %s", __get_hex_string(res, 5, 7));
                 // printf("\nRSSI: %s", __get_hex_string(res, res_len - 2, res_len - 1));
                 // printf("\nEPC: %s", __get_hex_string(res, 7, res_len - 2));
-                printf("0x%s", __get_hex_string(res, 7, res_len-2));
+                printf("UHF EPC: 0x%s", __get_hex_string(res, 7, res_len-2));
                 fflush(stdout);
                 return __get_hex_string(res, 7, res_len - 2);
             }

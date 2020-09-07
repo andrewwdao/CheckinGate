@@ -160,10 +160,11 @@ void add_bit_w26(int8_t bit)
 void timeout_handler(void)
 {
     if (wds.code_valid) { //if the received code is valid
-        printf("0x%X\n", wds.full_code);
         if (ext_timeout_handler) ext_timeout_handler(wds.full_code);
+        else printf("0x%X\n", wds.full_code);
     } else { //if the received code is NOT valid
-        printf("CHECKSUM_FAILED\n");
+        if (ext_timeout_handler) ext_timeout_handler(0);
+        else printf("CHECKSUM_FAILED\n");
     }//end if else
     fflush(stdout);
     
@@ -209,7 +210,7 @@ void reset_timer(uint32_t usec)
     }
 }//end reset_timer
 
-void set_rfid_ext_timeout_handler(void (ext_timeout_handler_)()) {
+void rfid_set_ext_timeout_handler(void (ext_timeout_handler_)()) {
     ext_timeout_handler = ext_timeout_handler_;
 }
 

@@ -41,7 +41,7 @@
 #define __RFID_WIEGAND_C
 #include <sys/time.h>
 #include <signal.h>
-// #include <wiringPi.h>
+#include <wiringPi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -209,7 +209,7 @@ void reset_timer(uint32_t usec)
     }
 }//end reset_timer
 
-void set_ext_timeout_handler(void (ext_timeout_handler_)()) {
+void set_rfid_ext_timeout_handler(void (ext_timeout_handler_)()) {
     ext_timeout_handler = ext_timeout_handler_;
 }
 
@@ -237,21 +237,21 @@ int rfid_init(int d0pin, int d1pin, int oepin)
         return 1;
     };
     //---------------------- Setup GPIOs -----------------------
-    // wiringPiSetup();
-    // pinMode(d0pin, INPUT);
-    // pinMode(d1pin, INPUT);
+    wiringPiSetup();
+    pinMode(d0pin, INPUT);
+    pinMode(d1pin, INPUT);
 
-    // if (oepin>0) {
-    //     pinMode(oepin, OUTPUT);
-    //     digitalWrite(oepin, LOW);
-    //     sleep(0.3);
-    //     digitalWrite(oepin, HIGH);
-    // }
+    if (oepin>0) {
+        pinMode(oepin, OUTPUT);
+        digitalWrite(oepin, LOW);
+        sleep(0.3);
+        digitalWrite(oepin, HIGH);
+    }
 
-    // wiringPiISR(d0pin, INT_EDGE_FALLING, d0_ISR);
-    // wiringPiISR(d1pin, INT_EDGE_FALLING, d1_ISR);
+    wiringPiISR(d0pin, INT_EDGE_FALLING, d0_ISR);
+    wiringPiISR(d1pin, INT_EDGE_FALLING, d1_ISR);
 
-    // reset_sequence();
+    reset_sequence();
     return 0;
 }//end rfid_init
 

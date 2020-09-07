@@ -6,10 +6,7 @@
 #include <rabbitmq.h>
 #include <pir.h>
 #include <rfid.h>
-
-uint8_t run_pir = 1;
-uint8_t run_rfid = 1;
-uint8_t run_uhf = 1;
+#include <uhf.h>
 
 char* format_message(char* sensor, uint8_t sensor_id, char* raw_data) {
 	char* message = malloc(200);
@@ -28,28 +25,37 @@ char* format_message(char* sensor, uint8_t sensor_id, char* raw_data) {
 }
 
 void pir_1_isr() {
-	printf("c1\n");
+	printf("PIR: 1\n");
 	fflush(stdout);
 }
 void pir_2_isr() {
-	printf("c2\n");
+	printf("PIR: 2\n");
 	fflush(stdout);
 }
 void pir_3_isr() {
-	printf("c3\n");
+	printf("PIR: 3\n");
 	fflush(stdout);
 }
 void pir_4_isr() {
-	printf("c4\n");
+	printf("PIR: 4\n");
 	fflush(stdout);
 }
 
 void rfid_timeout_handler(int full_code) {
-	printf("%d", full_code);
+	printf("RFID: 0x%X\n", full_code);
 	fflush(stdout);
 }
 
+void uhf_read_handler(int data) {
+	printf("UHF RFID: 0x%s\n");
+}
+
 int main() {
+	uint8_t run_pir = 1;
+	uint8_t run_rfid = 1;
+	uint8_t run_uhf = 0;
+
+
 	amqp_connection_state_t conn;
 	amqp_basic_properties_t props;
 
@@ -59,6 +65,7 @@ int main() {
 				 conn, &props);
 
 	if (run_pir) {
+		printf("Init PIR...\n");
 		set_pir_isr_handler(1, &pir_1_isr);
 		set_pir_isr_handler(2, &pir_2_isr);
 		set_pir_isr_handler(3, &pir_3_isr);
@@ -67,9 +74,19 @@ int main() {
 	}
 
 	if (run_rfid) {
-		set_ext_timeout_handler(&rfid_timeout_handler);
-		pir_init(0,0,0,0);
+		printf("Init RFID...\n");
+		set_rfid_ext_timeout_handler(&rfid_timeout_handler);
+		rfid_init(0,0,0);
 	}
+
+	if (run_uhf) {
+		printf("Init UHF RFID...\n");
+		uhf_set_param(0x02, 0x01, 11);
+		uhf_init("PORT", 115200, 11);
+	}
+
+	if (run_uhf) while(1) uhf_read_tag();
+	else while(1) pause();
 
 	return 0;
 }

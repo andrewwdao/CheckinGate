@@ -39,14 +39,17 @@
  -------------------------------------------------------------- */
 #ifndef __UHF_RS232_C
 #define __UHF_RS232_C
-#include <sys/time.h>
-#include <signal.h>
-#include <pthread.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <wiringPi.h>
 #include <wiringSerial.h>
 #include <errno.h> //errno
 #include <string.h> //strerror
-#include "uhf_rs232.h"
+
+#include <uhf.h>
+
 // ------ Private constants -----------------------------------
 #define BAUDRATE         115200
 #define PORT             "/dev/serial0" // /dev/ttyAMA0
@@ -162,7 +165,7 @@ char* __get_hex_string(char* arr, uint8_t s, uint8_t e)
     char* end_of_str = str;
 
     for (uint8_t i = s; i < e; i++)
-        end_of_str += sprintf(end_of_str, "%02X ", arr[i]);
+        end_of_str += sprintf(end_of_str, "%02X", arr[i]);
 
     *end_of_str = '\0';
     return str;
@@ -207,7 +210,7 @@ void __reset_reader()
 /**
  * @brief Read tag
  */
-char* read_tag()
+char* uhf_read_tag()
 {
     // printf("\nRead tag: ");
     char read_cmd[] = {READ_CMD, membank, word_address, word_cnt};
@@ -248,7 +251,7 @@ char* read_tag()
     return "ERR";
 }
 
-char* realtime_inventory()
+char* uhf_realtime_inventory()
 {
     char rt_inv_cmd[] = {RT_INVENTORY_CMD, 255};
     uint8_t len = (uint8_t)sizeof(rt_inv_cmd)/sizeof(rt_inv_cmd[0]);
@@ -268,7 +271,8 @@ char* realtime_inventory()
             else {
                 // printf("\nPC: %s", __get_hex_string(res, 5, 7));
                 // printf("\nRSSI: %s", __get_hex_string(res, res_len - 2, res_len - 1));
-                printf("\nEPC: %s", __get_hex_string(res, 7, res_len - 2));
+                // printf("\nEPC: %s", __get_hex_string(res, 7, res_len - 2));
+                printf("0x%s", __get_hex_string(res, 7, res_len-2));
                 fflush(stdout);
                 return __get_hex_string(res, 7, res_len - 2);
             }
@@ -278,7 +282,7 @@ char* realtime_inventory()
     return "ERR";
 }
 
-uint8_t set_param(uint8_t _membank, uint8_t _word_address, uint8_t _word_cnt)
+uint8_t uhf_set_param(uint8_t _membank, uint8_t _word_address, uint8_t _word_cnt)
 {
     membank = _membank;
     word_address = _word_address;
@@ -336,7 +340,7 @@ uint8_t uhf_init(const char* port, uint32_t baudrate, uint8_t oepin)
 /**
  * @brief Show usage information for the user
 */
-void uhf_showUsage()
+void uhf_show_usage()
 {
     printf("\nHow to use:\n");
     printf("Type in the command line:\n");

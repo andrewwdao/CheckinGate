@@ -114,7 +114,10 @@ static int word_cnt=0x01;
 // FUNCTION DEFINITIONS
 //--------------------------------------------------------------
 /**
- *  @brief Read datasheet for checksum function 
+ *  @brief Get checksum from uBuff
+ *  @param uBuff the buffer to get checksum
+ *  @param uLength length of the buffer
+ *  @return checksum of the buffer
  */
 char __get_checksum(char* uBuff, uint8_t uLength)
 {
@@ -126,6 +129,8 @@ char __get_checksum(char* uBuff, uint8_t uLength)
 
 /**
  *  @brief format command to byte array
+ *  @param arr the command to be formatted
+ *  @param n length of the command array
  */
 const char* __format_command(char* arr, uint8_t n)
 {
@@ -145,9 +150,11 @@ const char* __format_command(char* arr, uint8_t n)
 }
 
 /**
- * @brief Generate hex string from array
- * @param arr Data
- *
+ *  @brief Generate hex string from array
+ *  @param arr array of data
+ *  @param s start index
+ *  @param e end index
+ *  @return formatted string
  */
 char* __get_hex_string(char* arr, uint8_t s, uint8_t e)
 {
@@ -155,15 +162,15 @@ char* __get_hex_string(char* arr, uint8_t s, uint8_t e)
     char* end_of_str = str;
 
     for (uint8_t i = s; i < e; i++)
-        end_of_str += sprintf(end_of_str, "%02X ", arr[i]);
+        end_of_str += sprintf(end_of_str, "%02X", arr[i]);
 
     *end_of_str = '\0';
     return str;
 }
 
 /**
- * @brief Read the whole packet
- * @return 
+ *  @brief Read the whole packet
+ *  @return Read packet
  */
 char* __read_response_packet(uint8_t* packet_len)
 {
@@ -192,8 +199,8 @@ char* __read_response_packet(uint8_t* packet_len)
  */
 void __reset_reader() 
 {
-    uint8_t len = 1;
     char reset_cmd[] = {RESET_CMD};
+    uint8_t len = (uint8_t)sizeof(reset_cmd)/sizeof(reset_cmd[0]);
     serialPrintf(fd, __format_command(reset_cmd, len));
 }
 
@@ -203,8 +210,8 @@ void __reset_reader()
 char* read_tag()
 {
     // printf("\nRead tag: ");
-    uint8_t len = 4;
     char read_cmd[] = {READ_CMD, membank, word_address, word_cnt};
+    uint8_t len = (uint8_t)sizeof(read_cmd)/sizeof(read_cmd[0]);
     serialPrintf(fd, __format_command(read_cmd, len));
 
     usleep(10000); // us
@@ -244,7 +251,8 @@ char* read_tag()
 char* realtime_inventory()
 {
     char rt_inv_cmd[] = {RT_INVENTORY_CMD, 255};
-    serialPrintf(fd, __format_command(rt_inv_cmd, 2));
+    uint8_t len = (uint8_t)sizeof(rt_inv_cmd)/sizeof(rt_inv_cmd[0]);
+    serialPrintf(fd, __format_command(rt_inv_cmd, len));
 
     usleep(1000);
 
@@ -260,7 +268,8 @@ char* realtime_inventory()
             else {
                 // printf("\nPC: %s", __get_hex_string(res, 5, 7));
                 // printf("\nRSSI: %s", __get_hex_string(res, res_len - 2, res_len - 1));
-                printf("\nEPC: %s", __get_hex_string(res, 7, res_len - 2));
+                // printf("\nEPC: %s", __get_hex_string(res, 7, res_len - 2));
+                printf("0x%s", __get_hex_string(res, 7, res_len-2));
                 fflush(stdout);
                 return __get_hex_string(res, 7, res_len - 2);
             }

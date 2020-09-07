@@ -2,28 +2,48 @@
 # https://www.geeksforgeeks.org/static-vs-dynamic-libraries/
 # https://www.rapidtables.com/code/linux/gcc/gcc-l.html
 
-TARGET=test_send
+
+TARGET=main
 
 OBJ_DIR=obj
+HEADERS_DIR=headers
+DEPS_DIR=src
+LIB_DEPS_DIR=libs
 
-DEPS_DIR=libs
-DEPS_=amqp_api amqp_connection amqp_mem amqp_socket amqp_table amqp_tcp_socket amqp_time
+DEPS_=pir rabbitmq rfid
 DEPS=$(DEPS_:%=$(OBJ_DIR)/%.o)
 
-$(TARGET): $(OBJ_DIR)/$(TARGET).o $(OBJ_DIR)/librabbitmq.a
-	gcc -I$(DEPS_DIR) -o $@ $(OBJ_DIR)/$(TARGET).o -L$(OBJ_DIR) -lrabbitmq
+LIB_DEPS_=amqp_api amqp_connection amqp_mem amqp_socket amqp_table amqp_tcp_socket amqp_time amqp_framing
+LIB_DEPS=$(LIB_DEPS_:%=$(OBJ_DIR)/%.o)
 
-# Build static library from object files
-$(OBJ_DIR)/librabbitmq.a: $(DEPS) $(OBJ_DIR)/amqp_framing.o
-	ar rcs $@ $^
+CFLAGS=-lwiringPi
 
-# Build object files from source files
+$(TARGET): $(OBJ_DIR)/$(TARGET).o $(LIB_DEPS) $(DEPS)
+	gcc -I$(HEADERS_DIR) -o $@ $^
+
+# Build library object files from library source files
+$(OBJ_DIR)/%.o: $(LIB_DEPS_DIR)/%.c
+	gcc -I$(HEADERS_DIR) -c $^ -o$@
+
+# Build source object files from source files
 $(OBJ_DIR)/%.o: $(DEPS_DIR)/%.c
-	gcc -I$(DEPS_DIR) -c $^ -o$@
+	gcc $(CFLAGS) -I$(HEADERS_DIR) -c $^ -o$@
 
-# Build object file for main target
-$(OBJ_DIR)/%.o: %.c
-	gcc -I$(DEPS_DIR) -c $^ -o$@
 
 clean:
 	rm -rf $(OBJ_DIR)/*.o $(OBJ_DIR)/*.a $(TARGET)
+
+
+
+
+
+# $(TARGET): $(OBJ_DIR)/$(TARGET).o $(OBJ_DIR)/librabbitmq.a
+# 	gcc -I$(HEADERS_DIR) -o $@ $(OBJ_DIR)/$(TARGET).o -L$(OBJ_DIR) -lrabbitmq
+
+# Build static library from object files
+# $(OBJ_DIR)/librabbitmq.a: $(DEPS) $(LIB_DEPS) $(OBJ_DIR)/amqp_framing.o
+# 	ar rcs $@ $^
+
+# Build object file for main target
+# $(OBJ_DIR)/%.o: %.c
+# 	gcc -I$(HEADERS_DIR) -c $^ -o$@

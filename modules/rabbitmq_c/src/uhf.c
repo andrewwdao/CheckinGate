@@ -228,7 +228,7 @@ char* uhf_read_tag()
 
     if (res_len != 0)
     {
-        if (res_len == 6) printf("Error: 0x%02X\n", res[4]);
+        if (res_len == 6) return "ERR";//printf("Error: 0x%02X\n", res[4]);
         else
         {
             if (__get_checksum(res, res_len-1) != res[res_len - 1]) printf("CHECKSUM FAILED");
@@ -241,7 +241,7 @@ char* uhf_read_tag()
                 // printf("EPC: %s\n", __get_hex_string(res, 9, 7 + data_len - read_len - 2));
                 // printf("CRC: %s\n", __get_hex_string(res, 7 + data_len - read_len - 2, 7 + data_len - read_len));
                 // printf("Full package: %s\n", __get_hex_string(res, 0, res_len));
-                printf("UHF Read data: %s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
+                printf("UHF Read data: 0x%s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
                 fflush(stdout);
                 return __get_hex_string(res, 7 + data_len - read_len, 7 + data_len);
             }
@@ -264,7 +264,7 @@ char* uhf_realtime_inventory()
 
     if (res_len != 0)
     {
-        if (res_len == 6) printf("Error: 0x%02X\n", res[4]);
+        if (res_len == 6) return "ERR";//printf("Error: 0x%02X\n", res[4]);
         else
         {
             if (__get_checksum(res, res_len-1) != res[res_len - 1]) printf("CHECKSUM FAILED");
@@ -272,7 +272,7 @@ char* uhf_realtime_inventory()
                 // printf("\nPC: %s", __get_hex_string(res, 5, 7));
                 // printf("\nRSSI: %s", __get_hex_string(res, res_len - 2, res_len - 1));
                 // printf("\nEPC: %s", __get_hex_string(res, 7, res_len - 2));
-                printf("UHF EPC: 0x%s", __get_hex_string(res, 7, res_len-2));
+                printf("UHF EPC: 0x%s\n", __get_hex_string(res, 7, res_len-2));
                 fflush(stdout);
                 return __get_hex_string(res, 7, res_len - 2);
             }

@@ -49,9 +49,6 @@
 
 // ------ Private constants -----------------------------------
 #define WIEGAND_MAXBITS 27
-#define DEAFULT_RFID_ID 0
-#define MAX_RFID_READER 2
-
 /** 
  * @note Wiegand defines:
  *        + a Pulse Width time between 20 μs and 100 μs (microseconds)
@@ -61,16 +58,14 @@
 // ------ Private function prototypes -------------------------
 void d0_ISR(void);
 void d1_ISR(void);
-void add_bit_w26(uint8_t,uint8_t);
-void timeout_handler();
-void reset_sequence(uint8_t);
-void reset_timer(uint8_t);
+void add_bit_w26(int8_t);
+void timeout_handler(void);
+void reset_sequence(void);
+void reset_timer(uint32_t);
 
-// ------ not Private variables -----------------------------------
-uint8_t rfid_cnt = 0;
-
-struct itimerval it_val[MAX_RFID_READER];
-struct sigaction sa[MAX_RFID_READER];
+// ------ Private variables -----------------------------------
+struct itimerval it_val;
+struct sigaction sa;
 
 struct wiegand_data {
     uint8_t p0, p1;             //parity 0, parity 1
@@ -80,25 +75,21 @@ struct wiegand_data {
     uint32_t full_code;
     uint8_t code_valid;
     uint8_t bitcount;
-} wds[MAX_RFID_READER];
+} wds;
 
+void (*ext_timeout_handler)() = NULL;
 // ------ PUBLIC variable definitions -------------------------
 
 //--------------------------------------------------------------
 // FUNCTION DEFINITIONS
-
-void handle_ext_isr(uint8_t bit, uint8_t id) {
-    reset_timer(id);     //timeout waiting for next bit
-    add_bit_w26(bit, id);
-}
 //--------------------------------------------------------------
 /**
  *  @brief DATA0 Interrupt Routine 
  */
 void d0_ISR(void)
 {
-    reset_timer(DEAFULT_RFID_ID);     //timeout waiting for next bit
-    add_bit_w26(0, DEAFULT_RFID_ID);
+    reset_timer(WIEGAND_BIT_INTERVAL_TIMEOUT_USEC);     //timeout waiting for next bit
+    add_bit_w26(0);
 }//end d0_ISR
 
 //--------------------------------------------------------------
@@ -107,8 +98,8 @@ void d0_ISR(void)
  */
 void d1_ISR(void)
 {
-    reset_timer(DEAFULT_RFID_ID);     //timeout waiting for next bit
-    add_bit_w26(1, DEAFULT_RFID_ID);
+    reset_timer(WIEGAND_BIT_INTERVAL_TIMEOUT_USEC);     //timeout waiting for next bit
+    add_bit_w26(1);
 }//end d1_ISR
 
 //--------------------------------------------------------------
@@ -116,48 +107,48 @@ void d1_ISR(void)
  * @brief Parse Wiegand 26bit format. Called wherever a new bit is read
  * @param bit: 0 or 1
 */
-void add_bit_w26(uint8_t bit, uint8_t id)
+void add_bit_w26(int8_t bit)
 {
     //---------------------Parity calculation
-    if (wds[id].bitcount > 0 && wds[id].bitcount <= 12) {wds[id].p0 += bit;}
-    else if (wds[id].bitcount >= 13 && wds[id].bitcount <= 24) {wds[id].p1 += bit;}
+    if (wds.bitcount > 0 && wds.bitcount <= 12) {wds.p0 += bit;}
+    else if (wds.bitcount >= 13 && wds.bitcount <= 24) {wds.p1 += bit;}
 
     //---------------------Code calculation
-    if (wds[id].bitcount == 0) {
-        wds[id].p0_check = bit; //get current bit for checksum later
+    if (wds.bitcount == 0) {
+        wds.p0_check = bit; //get current bit for checksum later
     }
-    else if (wds[id].bitcount <= 8) {
-        wds[id].facility_code <<= 1;
-        wds[id].facility_code |= bit;
+    else if (wds.bitcount <= 8) {
+        wds.facility_code <<= 1;
+        wds.facility_code |= bit;
     }
-    else if (wds[id].bitcount < 25) {
-        wds[id].card_code <<= 1;
-        wds[id].card_code |= bit;
+    else if (wds.bitcount < 25) {
+        wds.card_code <<= 1;
+        wds.card_code |= bit;
     }
-    else if (wds[id].bitcount == 25) {
-        wds[id].p1_check = bit; //get current bit for checksum later
-        wds[id].full_code = wds[id].facility_code;
-        wds[id].full_code = wds[id].full_code << 16;
-        wds[id].full_code += wds[id].card_code;
-        wds[id].code_valid = 1;
+    else if (wds.bitcount == 25) {
+        wds.p1_check = bit; //get current bit for checksum later
+        wds.full_code = wds.facility_code;
+        wds.full_code = wds.full_code << 16;
+        wds.full_code += wds.card_code;
+        wds.code_valid = 1;
         //---------------------check parity
-        if ((wds[id].p0 % 2) != wds[id].p0_check) {
-            wds[id].code_valid = 0;
+        if ((wds.p0 % 2) != wds.p0_check) {
+            wds.code_valid = 0;
             fprintf(stderr, "Incorrect even parity bit (leftmost)\n");
         }
-        else if ((!(wds[id].p1 % 2)) != wds[id].p1_check) {
-            wds[id].code_valid = 0;
+        else if ((!(wds.p1 % 2)) != wds.p1_check) {
+            wds.code_valid = 0;
             fprintf(stderr, "Incorrect odd parity bit (rightmost)\n");
         }
-    }// end else if wds[id].bitcount == 25
-    else if (wds[id].bitcount > 25) {
-        wds[id].code_valid = 0;
-        reset_sequence(id);
+    }// end else if wds.bitcount == 25
+    else if (wds.bitcount > 25) {
+        wds.code_valid = 0;
+        reset_sequence();
     }
 
     //---------------------Increase bit counting
-    if (wds[id].bitcount < WIEGAND_MAXBITS) {
-        wds[id].bitcount++;
+    if (wds.bitcount < WIEGAND_MAXBITS) {
+        wds.bitcount++;
     }
 }//end add_bit_w26
 
@@ -166,16 +157,18 @@ void add_bit_w26(uint8_t bit, uint8_t id)
  * @brief Timeout from last bit read. Sequence may be completed or not
  *        If completed, then output the desired information
 */
-void timeout_handler()
+void timeout_handler(void)
 {
-    if (wds[DEAFULT_RFID_ID].code_valid) { //if the received code is valid
-        printf("0x%06X\n", wds[DEAFULT_RFID_ID].full_code);
+    if (wds.code_valid) { //if the received code is valid
+        if (ext_timeout_handler) ext_timeout_handler(wds.full_code);
+        else printf("0x%X\n", wds.full_code);
     } else { //if the received code is NOT valid
-        printf("CHECKSUM_FAILED\n");
+        if (ext_timeout_handler) ext_timeout_handler(0);
+        else printf("CHECKSUM_FAILED\n");
     }//end if else
     fflush(stdout);
     
-    reset_sequence(DEAFULT_RFID_ID);
+    reset_sequence();
 
 } //end timeout_handler
 
@@ -184,16 +177,16 @@ void timeout_handler()
  * @brief Reset sequence of the wiegand data
  *        (reset bit counting variable)
 */
-void reset_sequence(uint8_t id)
+void reset_sequence(void)
 {
-    wds[id].bitcount = 0;
-    wds[id].p0 = 0;
-    wds[id].p1 = 0;
-    wds[id].p0_check = 0;
-    wds[id].p1_check = 0;
-    wds[id].code_valid = 0;
-    wds[id].facility_code = 0;
-    wds[id].card_code = 0;
+    wds.bitcount = 0;
+    wds.p0 = 0;
+    wds.p1 = 0;
+    wds.p0_check = 0;
+    wds.p1_check = 0;
+    wds.code_valid = 0;
+    wds.facility_code = 0;
+    wds.card_code = 0;
 }//end reset_sequence
 
 //--------------------------------------------------------------
@@ -201,21 +194,25 @@ void reset_sequence(uint8_t id)
  * @brief timeout handler (usec), should fire after bit sequence has been read
  * @param usec: microsecond to wait before trigger timeout
 */
-void reset_timer(uint8_t id)
-{
+void reset_timer(uint32_t usec)
+{ 
     /** @note Time until next expiration */
-    it_val[id].it_value.tv_sec = 0;
-    it_val[id].it_value.tv_usec = WIEGAND_BIT_INTERVAL_TIMEOUT_USEC;
+    it_val.it_value.tv_sec = 0;
+    it_val.it_value.tv_usec = usec;
 
     /** @note Interval for periodic timer */
-    it_val[id].it_interval.tv_sec = 0;
-    it_val[id].it_interval.tv_usec = 0;
+    it_val.it_interval.tv_sec = 0;
+    it_val.it_interval.tv_usec = 0;
 
-    if (setitimer(ITIMER_REAL, &it_val[id], NULL) < 0) {
+    if (setitimer(ITIMER_REAL, &it_val, NULL) < 0) {
         perror("setitimer");
         exit(1);
     }
 }//end reset_timer
+
+void rfid_set_ext_timeout_handler(void (ext_timeout_handler_)()) {
+    ext_timeout_handler = ext_timeout_handler_;
+}
 
 //--------------------------------------------------------------
 /**
@@ -226,26 +223,17 @@ void reset_timer(uint8_t id)
  * @param oepin: Enable pin for logic converter TXS0108E
  *               put -1 if used MOSFET converter
 */
-int rfid_init(int d0pin, int d1pin, int oepin,
-              void (*d0_ext_isr_)(), void (*d1_ext_isr_)(),void(*ext_timeout_handler_)())
+int rfid_init(int d0pin, int d1pin, int oepin) 
 {
-    if (rfid_cnt == MAX_RFID_READER) return 1;
-    
-    // it_val = (struct itimerval*)realloc(it_val, sizeof(struct itimerval)*(rfid_cnt+1));
-    // sa = (struct sigaction*)realloc(sa, sizeof(struct sigaction)*(rfid_cnt+1));
-    // wds = (struct wiegand_data*)realloc(wds, sizeof(struct wiegand_data)*(rfid_cnt+1));
-
     //-------------- Setup wiegand timeout handler -------------
     /** @brief initialize and empty a signal set */
-    sigemptyset(&sa[rfid_cnt].sa_mask);
-
-    // if (ext_timeout_handler_) ext_timeout_handler_();
+    sigemptyset(&sa.sa_mask);
     
     /** @brief assign handler for sigaction */
-    sa[rfid_cnt].sa_handler = ext_timeout_handler_ ? ext_timeout_handler_ : timeout_handler;
+    sa.sa_handler = (void (*)(int))timeout_handler;
 
     /** @brief assign catching signal for sigaction*/
-    if (sigaction(SIGALRM, &sa[rfid_cnt], NULL) < 0) {
+    if (sigaction(SIGALRM, &sa, NULL) < 0) {
         perror("sigaction");
         return 1;
     };
@@ -261,13 +249,10 @@ int rfid_init(int d0pin, int d1pin, int oepin,
         digitalWrite(oepin, HIGH);
     }
 
-    wiringPiISR(d0pin, INT_EDGE_FALLING, d0_ext_isr_ ? d0_ext_isr_ : d0_ISR);
-    wiringPiISR(d1pin, INT_EDGE_FALLING, d1_ext_isr_ ? d1_ext_isr_ : d1_ISR);
+    wiringPiISR(d0pin, INT_EDGE_FALLING, d0_ISR);
+    wiringPiISR(d1pin, INT_EDGE_FALLING, d1_ISR);
 
-    reset_sequence(rfid_cnt);
-    
-    ++rfid_cnt;
-    
+    reset_sequence();
     return 0;
 }//end rfid_init
 
@@ -287,8 +272,8 @@ void rfid_showUsage()
     printf("\t-e OE-pin: GPIO pin for output enable pin (wiringPi pin)\n\n");
     fflush(stdout);
 }//end rfid_showUsage
-//--------------------------------------------------------------
 
+//--------------------------------------------------------------
 #endif //__RFID_WIEGAND_C
 
 
@@ -298,7 +283,7 @@ void rfid_showUsage()
 /** @brief debug inside isr:
 if (debug) {
         fprintf(stderr, "Bit:%02ld, Pulse 0, %ld us since last bit\n",
-                wds[id].bitcount, get_bit_timediff_ns() / 1000);
+                wds.bitcount, get_bit_timediff_ns() / 1000);
         clock_gettime(CLOCK_MONOTONIC, &wbit_tm);
     }//end if
 */
@@ -319,12 +304,12 @@ unsigned uint32_t get_bit_timediff_ns() {
 */
 /** @brief show all information
 void rfid_showAll() {
-    printf("\n*** Code Valid: %d\n", wds[id].code_valid);
-    printf("*** Facility code: %d(dec) 0x%X\n", wds[id].facility_code,
-           wds[id].facility_code);
-    printf("*** Card code: %d(dec) 0x%X\n", wds[id].card_code, wds[id].card_code);
-    printf("*** Full code: %d\n", wds[id].full_code);
-    printf("*** Parity 0:%d Parity 1:%d\n\n", wds[id].p0_check, wds[id].p1_check);
+    printf("\n*** Code Valid: %d\n", wds.code_valid);
+    printf("*** Facility code: %d(dec) 0x%X\n", wds.facility_code,
+           wds.facility_code);
+    printf("*** Card code: %d(dec) 0x%X\n", wds.card_code, wds.card_code);
+    printf("*** Full code: %d\n", wds.full_code);
+    printf("*** Parity 0:%d Parity 1:%d\n\n", wds.p0_check, wds.p1_check);
     fflush(stdout);
 }//end rfid_showAll
 */

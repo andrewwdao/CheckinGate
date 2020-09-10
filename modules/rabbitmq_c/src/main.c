@@ -1,4 +1,8 @@
+#ifndef MAIN_
+#define MAIN_
+
 #include <stdio.h>
+#include <stdint.h>
 #include <malloc.h>
 #include <time.h>
 #include <unistd.h>
@@ -14,12 +18,12 @@ amqp_basic_properties_t props;
 // Hard coded for testing
 char* exchange_name = "ex_sensors";
 char* routing_key_prefix = "event";
-char* rabbitmq_host = "mekosoft.vn";
+char* rabbitmq_host = "localhost";
 char* rabbitmq_username = "admin";
 char* rabbitmq_password = "admin";
 int rabbitmq_port = 5672;
 
-uint8_t run_rabbitmq = 0;
+uint8_t run_rabbitmq = 1;
 uint8_t run_pir = 1;
 uint8_t run_rfid = 1;
 uint8_t run_uhf = 0;
@@ -37,7 +41,7 @@ uint8_t oe_pin = 11;
 const char* uhf_port = "/dev/serial0";
 
 char* format_message(char* sensor, char* src, char* data) {
-	char* message = malloc(300);
+	char* message = (char*)malloc(300);
 
 	snprintf(message, 300,
 		"{"
@@ -69,34 +73,31 @@ void pir_isr_handler(char* id) {
 				 conn, &props);
 }
 
-void rfid_timeout_handler(char* id, uint32_t full_code) {
+void rfid_timeout_handler(uint8_t id) {
+	// printf("%d\n", id);
+	// return;
+
+	uint32_t full_code = wds[id++].full_code;
+
 	if (!full_code) {
-		printf("RFID %s: CHECKSUM FAILED\n", id);
+		printf("RFID %d: CHECKSUM FAILED\n", id);
 		return;
 	}
 
-	printf("RFID %s: 0x%X\n", id, full_code);
+	printf("RFID %d: 0x%06X\n", id, full_code);
 	fflush(stdout);
 
 	char rfid_src[10];
-	snprintf(rfid_src, 10, "rfid.%s", id);
+	snprintf(rfid_src, 10, "rfid.%d", id);
 	char routing_key[20];
 	snprintf(routing_key, 20, "%s.%s", routing_key_prefix, rfid_src);
 	char data[20];
-	snprintf(data, 20, "tag_id:0x%X", full_code);
+	snprintf(data, 20, "tag_id:0x%06X", full_code);
 
 	if (run_rabbitmq)
 	send_message(format_message("rfid", rfid_src, data),
 				 exchange_name, routing_key,
 				 conn, &props);
-}
-
-void rfid_1_timeout_handler(uint32_t full_code) {
-	rfid_timeout_handler("1", full_code);
-}
-
-void rfid_2_timeout_handler(uint32_t full_code) {
-	rfid_timeout_handler("2", full_code);
 }
 
 void uhf_read_handler(char* read_data) {
@@ -132,11 +133,16 @@ int main() {
 	if (run_rfid) {
 		printf("Init RFID...\n");
 
-		// rfid_init(rfid_1_d0_pin, rfid_1_d1_pin, oe_pin);
-		// rfid_set_ext_timeout_handler(&rfid_1_timeout_handler, 0);
+		// void rfid_1_d0_isr RFID_CREATE_ISR_HANDLER(RFID_D0_BIT);
+		// void rfid_1_d1_isr RFID_CREATE_ISR_HANDLER(RFID_D1_BIT);
+		// void rfid_1_timeout_handler RFID_CREATE_TIMEOUT_HANDLER(rfid_timeout_handler);
+		// rfid_init(rfid_1_d0_pin, rfid_1_d1_pin, oe_pin, rfid_1_d0_isr, rfid_1_d1_isr, rfid_1_timeout_handler);
 
-		rfid_init(rfid_2_d0_pin, rfid_2_d1_pin, oe_pin);
-		// rfid_set_ext_timeout_handler(&rfid_2_timeout_handler, 0);
+		printf("%d\n", rfid_cnt);
+		void rfid_2_d0_isr RFID_CREATE_ISR_HANDLER(RFID_D0_BIT);
+		void rfid_2_d1_isr RFID_CREATE_ISR_HANDLER(RFID_D1_BIT);
+		void rfid_2_timeout_handler RFID_CREATE_TIMEOUT_HANDLER(rfid_timeout_handler);
+		rfid_init(rfid_2_d0_pin, rfid_2_d1_pin, oe_pin, rfid_2_d0_isr, rfid_2_d1_isr, rfid_2_timeout_handler);
 	}
 
 	if (run_uhf) {
@@ -148,8 +154,10 @@ int main() {
 	printf("System running...\n");
 	fflush(stdout);
 	
-	if (run_uhf) while(1) uhf_read_handler(uhf_read_tag());
+	if (run_uhf) while(1) uhf_read_handler(uhf_realtime_inventory());
 	else while(1) pause();
 
 	return 0;
 }
+
+#endif

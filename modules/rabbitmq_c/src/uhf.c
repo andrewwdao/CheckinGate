@@ -308,7 +308,6 @@ uint8_t uhf_set_param(uint8_t _membank, uint8_t _word_address, uint8_t _word_cnt
 */
 uint8_t uhf_init(const char* port, uint32_t baudrate, uint8_t oepin) 
 {
-    printf("\nInit UHF RFID reader...\n");
     fflush(stdout);
     //-------------- Open connection -------------
     /** @brief initialize serial */

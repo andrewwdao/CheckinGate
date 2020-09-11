@@ -73,18 +73,13 @@ void pir_isr_handler(char* id) {
 				 conn, &props);
 }
 
-void rfid_timeout_handler(uint8_t id) {
-	// printf("%d\n", id);
-	// return;
-
-	uint32_t full_code = wds[id++].full_code;
-
-	if (!full_code) {
+void rfid_timeout_handler(uint8_t id, uint32_t fullcode) {
+	if (!fullcode) {
 		printf("RFID %d: CHECKSUM FAILED\n", id);
 		return;
 	}
 
-	printf("RFID %d: 0x%06X\n", id, full_code);
+	printf("RFID %d: 0x%06X\n", id, fullcode);
 	fflush(stdout);
 
 	char rfid_src[10];
@@ -92,7 +87,7 @@ void rfid_timeout_handler(uint8_t id) {
 	char routing_key[20];
 	snprintf(routing_key, 20, "%s.%s", routing_key_prefix, rfid_src);
 	char data[20];
-	snprintf(data, 20, "tag_id:0x%06X", full_code);
+	snprintf(data, 20, "tag_id:0x%06X", fullcode);
 
 	if (run_rabbitmq)
 	send_message(format_message("rfid", rfid_src, data),
@@ -133,16 +128,17 @@ int main() {
 	if (run_rfid) {
 		printf("Init RFID...\n");
 
-		// void rfid_1_d0_isr RFID_CREATE_ISR_HANDLER(RFID_D0_BIT);
-		// void rfid_1_d1_isr RFID_CREATE_ISR_HANDLER(RFID_D1_BIT);
-		// void rfid_1_timeout_handler RFID_CREATE_TIMEOUT_HANDLER(rfid_timeout_handler);
-		// rfid_init(rfid_1_d0_pin, rfid_1_d1_pin, oe_pin, rfid_1_d0_isr, rfid_1_d1_isr, rfid_1_timeout_handler);
+		int rfid_id = 0;
 
-		printf("%d\n", rfid_cnt);
-		void rfid_2_d0_isr RFID_CREATE_ISR_HANDLER(RFID_D0_BIT);
-		void rfid_2_d1_isr RFID_CREATE_ISR_HANDLER(RFID_D1_BIT);
-		void rfid_2_timeout_handler RFID_CREATE_TIMEOUT_HANDLER(rfid_timeout_handler);
-		rfid_init(rfid_2_d0_pin, rfid_2_d1_pin, oe_pin, rfid_2_d0_isr, rfid_2_d1_isr, rfid_2_timeout_handler);
+		void rfid_1_d0_isr() { handle_isr(rfid_id, RFID_D0_BIT); }
+		void rfid_1_d1_isr() { handle_isr(rfid_id, RFID_D1_BIT); }
+		rfid_init(rfid_1_d0_pin, rfid_1_d1_pin, 0, rfid_1_d0_isr, rfid_1_d1_isr, rfid_timeout_handler);
+		
+		++rfid_id;
+
+		void rfid_2_d0_isr() { handle_isr(rfid_id, RFID_D0_BIT); }
+		void rfid_2_d1_isr() { handle_isr(rfid_id, RFID_D1_BIT); }
+		rfid_init(rfid_2_d0_pin, rfid_2_d1_pin, oe_pin, rfid_2_d0_isr, rfid_2_d1_isr, rfid_timeout_handler);
 	}
 
 	if (run_uhf) {

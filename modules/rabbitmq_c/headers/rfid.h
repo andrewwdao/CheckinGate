@@ -3,27 +3,21 @@
 #define RFID_D0_BIT 0
 #define RFID_D1_BIT 1
 
+// extern uint8_t rfid_cnt;
+
 extern uint8_t rfid_cnt;
-extern struct wiegand_data {
-    uint8_t p0, p1;             //parity 0, parity 1
-    uint8_t p0_check, p1_check; //parity check for first and last bit
-    uint8_t facility_code;
-    uint16_t card_code;
-    uint32_t full_code;
-    uint8_t code_valid;
-    uint8_t bitcount;
-} wds[];
 
-#define RFID_CREATE_ISR_HANDLER(bit) (){ \
-    handle_ext_isr(bit, rfid_cnt); \
+#define RFID_CREATE_D0_ISR_HANDLER (){ \
+    handle_isr(rfid_cnt, 0); \
 }
 
-#define RFID_CREATE_TIMEOUT_HANDLER(handler) () { \
-    handler(rfid_cnt); \
+#define RFID_CREATE_D1_ISR_HANDLER (){ \
+    handle_isr(rfid_cnt, 1); \
 }
 
-int rfid_init(int,int,int,void(*)(),void(*)(),void(*)());
+
+int rfid_init(int,int,int,void(*)(),void(*)(),void(*)(uint8_t,uint32_t));
 void rfid_showUsage(void);
 
-void handle_ext_isr(uint8_t, uint8_t);
+void handle_isr(uint8_t, uint8_t);
 void rfid_set_ext_timeout_handler(void(*)(),uint8_t);

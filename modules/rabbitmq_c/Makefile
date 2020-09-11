@@ -18,7 +18,7 @@ DEPS=$(DEPS_:%=$(OBJ_DIR)/%.o)
 LIB_DEPS_=amqp_api amqp_connection amqp_mem amqp_socket amqp_table amqp_tcp_socket amqp_time amqp_framing
 LIB_DEPS=$(LIB_DEPS_:%=$(OBJ_DIR)/%.o)
 
-CFLAGS=-lwiringPi
+CFLAGS=-lwiringPi -lpthread
 
 $(TARGET): $(OBJ_DIR)/$(TARGET).o $(LIB_DEPS) $(DEPS)
 	$(COMPILER) -I$(HEADERS_DIR) -o $@ $^ $(CFLAGS)

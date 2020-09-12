@@ -182,7 +182,7 @@ int main() {
 	if (run_uhf) while(1) uhf_read_handler(uhf_realtime_inventory());
 	else while(1) {
 		for (uint8_t i = 1; i <= PIR_CNT; i++) {
-			if (pir_flags[i] && pir_will_send[i]) pir_send(i);
+			if (pir_flags[i]) pir_send(i);
 		}
 	}
 

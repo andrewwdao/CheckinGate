@@ -98,7 +98,9 @@ void pir_send(uint8_t id) {
 
 void pir_isr_handler(uint8_t id) {
 	printf("PIR: %d\n", id);
-	pir_flags[id] = 1;
+
+	if (pir_will_send[id])
+		pir_flags[id] = 1;
 }
 
 void rfid_timeout_handler(uint8_t id, uint32_t fullcode) {

@@ -26,19 +26,19 @@ int rabbitmq_port = 5672;
 
 uint8_t run_rabbitmq = 1;
 uint8_t run_pir = 1;
-uint8_t run_rfid = 0;
-uint8_t run_uhf = 0;
+uint8_t run_rfid = 1;
+uint8_t run_uhf = 1;
 
-uint8_t pir_1_pin = 1;
-uint8_t pir_2_pin = 4;
-uint8_t pir_3_pin = 5;
-uint8_t pir_4_pin = 6;
+int8_t pir_1_pin = -1; //1;
+int8_t pir_2_pin = 4;
+int8_t pir_3_pin = 5;
+int8_t pir_4_pin = -1; //6;
 
-uint8_t rfid_1_d0_pin = 2;
-uint8_t rfid_1_d1_pin = 3;
-uint8_t rfid_2_d0_pin = 7;
-uint8_t rfid_2_d1_pin = 0;
-uint8_t oe_pin = 11;
+int8_t rfid_1_d0_pin = 2;
+int8_t rfid_1_d1_pin = 3;
+int8_t rfid_2_d0_pin = 7;
+int8_t rfid_2_d1_pin = 0;
+int8_t oe_pin = 11;
 const char* uhf_port = "/dev/serial0";
 
 // PIR flags
@@ -46,6 +46,7 @@ const char* uhf_port = "/dev/serial0";
 uint8_t pir_flags[PIR_CNT+1] = {0,0,0,0,0};
 uint8_t pir_will_send[PIR_CNT+1] = {1,1,1,1,1};
 pthread_t pir_thread_id[PIR_CNT+1];
+pthread_t uhf_thread_id;
 
 
 char* format_message(char* sensor, char* src, char* data) {
@@ -79,8 +80,9 @@ void* pir_delay_handler(void* id_ptr) {
 
 void pir_send(uint8_t id) {
 	pir_flags[id] = 0;
+	pir_will_send[id] = 0; // Remove this line if threads are used
 
-	pthread_create(&pir_thread_id[id], NULL, pir_delay_handler, &id);
+	// pthread_create(&pir_thread_id[id], NULL, pir_delay_handler, &id);
 
 	char pir_src[10];
 	snprintf(pir_src, 10, "pir.%d", id);
@@ -93,7 +95,10 @@ void pir_send(uint8_t id) {
 		send_message(format_message("pir", pir_src, data),
 				 	 exchange_name, routing_key);
 	}
-	
+
+	// Remove these lines if threads are used
+	usleep(200000);
+	pir_will_send[id] = 1;
 }
 
 void pir_isr_handler(uint8_t id) {
@@ -104,6 +109,8 @@ void pir_isr_handler(uint8_t id) {
 }
 
 void rfid_timeout_handler(uint8_t id, uint32_t fullcode) {
+	++id;
+
 	if (!fullcode) {
 		printf("RFID %d: CHECKSUM FAILED\n", id);
 		return;
@@ -141,6 +148,10 @@ void uhf_read_handler(char* read_data) {
 				 exchange_name, routing_key);
 }
 
+void* uhf_thread(void* arg) {
+	while(1) uhf_read_handler(uhf_realtime_inventory());
+}
+
 int main() {
 	if (run_rabbitmq) {
 		printf("Init rabbitmq...\n");
@@ -157,16 +168,12 @@ int main() {
 	if (run_rfid) {
 		printf("Init RFID...\n");
 
-		int rfid_id = 0;
-
-		void rfid_1_d0_isr() { handle_isr(rfid_id, RFID_D0_BIT); }
-		void rfid_1_d1_isr() { handle_isr(rfid_id, RFID_D1_BIT); }
+		void rfid_1_d0_isr() { handle_isr(0, RFID_D0_BIT); }
+		void rfid_1_d1_isr() { handle_isr(0, RFID_D1_BIT); }
 		rfid_init(rfid_1_d0_pin, rfid_1_d1_pin, 0, rfid_1_d0_isr, rfid_1_d1_isr, rfid_timeout_handler);
 		
-		++rfid_id;
-
-		void rfid_2_d0_isr() { handle_isr(rfid_id, RFID_D0_BIT); }
-		void rfid_2_d1_isr() { handle_isr(rfid_id, RFID_D1_BIT); }
+		void rfid_2_d0_isr() { handle_isr(1, RFID_D0_BIT); }
+		void rfid_2_d1_isr() { handle_isr(1, RFID_D1_BIT); }
 		rfid_init(rfid_2_d0_pin, rfid_2_d1_pin, oe_pin, rfid_2_d0_isr, rfid_2_d1_isr, rfid_timeout_handler);
 	}
 
@@ -174,13 +181,14 @@ int main() {
 		printf("Init UHF RFID...\n");
 		uhf_set_param(0x02, 0x01, 11);
 		uhf_init(uhf_port, 115200, 11);
+
+		pthread_create(&uhf_thread_id, NULL, uhf_thread, NULL);
 	}
 
 	printf("System running...\n");
 	fflush(stdout);
 	
-	if (run_uhf) while(1) uhf_read_handler(uhf_realtime_inventory());
-	else while(1) {
+	while(1) {
 		for (uint8_t i = 1; i <= PIR_CNT; i++) {
 			if (pir_flags[i]) pir_send(i);
 		}

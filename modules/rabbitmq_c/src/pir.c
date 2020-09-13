@@ -45,13 +45,23 @@ void pir_set_ext_isr(void (*ext_isr_)(uint8_t)) {
 
 void pir_init(int pir_1_pin, int pir_2_pin,int pir_3_pin, int pir_4_pin) {
     wiringPiSetup();
-    pinMode(pir_1_pin, INPUT);
-    pinMode(pir_2_pin, INPUT);
-    pinMode(pir_3_pin, INPUT);
-    pinMode(pir_4_pin, INPUT);
+    if (pir_1_pin >= 0) {
+        pinMode(pir_1_pin, INPUT);
+        wiringPiISR(pir_1_pin, INT_EDGE_FALLING, pir_1_isr);
+    }
 
-    wiringPiISR(pir_1_pin, INT_EDGE_FALLING, pir_1_isr);
-    wiringPiISR(pir_2_pin, INT_EDGE_FALLING, pir_2_isr);
-    wiringPiISR(pir_3_pin, INT_EDGE_FALLING, pir_3_isr);
-    wiringPiISR(pir_4_pin, INT_EDGE_FALLING, pir_4_isr);
+    if (pir_2_pin >= 0) {
+        pinMode(pir_2_pin, INPUT);
+        wiringPiISR(pir_2_pin, INT_EDGE_FALLING, pir_2_isr);
+    }
+
+    if (pir_3_pin >= 0) {
+        pinMode(pir_3_pin, INPUT);
+        wiringPiISR(pir_3_pin, INT_EDGE_FALLING, pir_3_isr);
+    }
+
+    if (pir_4_pin >= 0) {
+        pinMode(pir_4_pin, INPUT);
+        wiringPiISR(pir_4_pin, INT_EDGE_FALLING, pir_4_isr);
+    }
 }

@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <wiringPi.h>
 
-#define PIR_CNT 4
 
 void (*pir_ext_isr)(uint8_t) = NULL;
 
@@ -43,7 +42,7 @@ void pir_set_ext_isr(void (*ext_isr_)(uint8_t)) {
     pir_ext_isr = ext_isr_;
 }
 
-void pir_init(int pir_1_pin, int pir_2_pin,int pir_3_pin, int pir_4_pin) {
+void pir_init(int8_t pir_1_pin, int8_t pir_2_pin,int8_t pir_3_pin, int8_t pir_4_pin) {
     wiringPiSetup();
     if (pir_1_pin >= 0) {
         pinMode(pir_1_pin, INPUT);

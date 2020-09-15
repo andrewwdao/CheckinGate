@@ -4,15 +4,11 @@
 #define RFID_D0_BIT 0
 #define RFID_D1_BIT 1
 
-// extern uint8_t rfid_cnt;
-
-extern uint8_t rfid_cnt;
-
 #define RFID_CREATE_ISR_HANDLER(id,bit) (){ \
-    handle_isr(id-1, bit); \
+    handle_isr(id, bit); \
 }
 
-int rfid_init(int,int,int,void(*)(),void(*)(),void(*)(uint8_t,uint32_t));
+uint8_t rfid_init(uint8_t,uint8_t,uint8_t,int8_t,void(*)(),void(*)(),void(*)(uint8_t,uint32_t));
 void rfid_showUsage(void);
 
 void handle_isr(uint8_t, uint8_t);

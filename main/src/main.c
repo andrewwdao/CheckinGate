@@ -52,6 +52,8 @@ pthread_t pir_thread_id;
 // --- UHF
 pthread_t uhf_thread_id;
 
+#define capture_cam01()   system("./src/cam01 &")
+#define capture_cam02()   system("./src/cam02 &")
 
 char* format_message(char* sensor, char* src, char* data) {
 	char* message = (char*)malloc(300);
@@ -102,8 +104,8 @@ void pir_isr_handler(uint8_t id) {
 	printf("PIR: %d\n", id);
 
 	if (pir_will_send[id]) {
-		if (id == 1) system("./cap_108 &");
-		else if (id == 2) system("./cap_109 &");
+		if (id == 1) 	  {capture_cam01();}
+		else if (id == 2) {capture_cam02();}
 
 		pir_flags[id] = 1;
 		pthread_create(&pir_thread_id, NULL, pir_loop, NULL);
@@ -156,6 +158,9 @@ void* uhf_thread(void* arg) {
 }
 
 int main() {
+	printf("Camera init...\n");
+	capture_cam01();
+	capture_cam02();
 	if (run_rabbitmq) {
 		printf("Init rabbitmq...\n");
 		rabbitmq_init(HOST, USERNAME, PASSWORD, PORT);
@@ -187,10 +192,8 @@ int main() {
 
 	printf("System running...\n");
 	fflush(stdout);
-	
-	while(1) {
-		pause();
-	}
+
+	while(1) pause();
 	return 0;
 }
 

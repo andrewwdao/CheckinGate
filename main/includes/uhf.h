@@ -34,6 +34,11 @@
  -------------------------------------------------------------- */
 #include <stdint.h>
 // ------ Public constants ------------------------------------
+// Membanks
+#define RESERVED_MEMBANK  0x00
+#define EPC_MEMBANK       0x01
+#define TID_MEMBANK       0x02
+#define USER_MEMBANK      0x03
 // ------ Public function prototypes --------------------------
 uint8_t uhf_init(const char*,uint32_t,uint8_t);
 uint8_t uhf_set_param(uint8_t,uint8_t,uint8_t);

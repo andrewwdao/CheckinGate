@@ -1,0 +1,12 @@
+#!/bin/sh
+ffmpeg -i "rtsp://checkingate:admin123@192.168.1.102:554/cam/realmonitor?channel=1&subtype=0" \
+	-fflags nobuffer \
+	-probesize 32 \
+	-analyzeduration 0 \
+	-rtsp_transport tcp \
+	-frames 2 \
+	-f image2 \
+	-v 0 \
+	img/cam02/img_$(date +%s)_%01d.jpg \
+	-y \
+	&

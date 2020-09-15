@@ -114,8 +114,6 @@ uint8_t rfid_init(uint8_t id, uint8_t d0_pin, uint8_t d1_pin, int8_t oe_pin,
     if (id) max_rfid_id = max(max_rfid_id, id);
     else id = DEAULT_RFID_ID;
 
-    printf("%d\n", id);
-
     wds = (struct wiegand_data*)realloc(wds,sizeof(struct wiegand_data)*(max_rfid_id+1));
     waiting_next_bit = (uint8_t*)realloc(waiting_next_bit, sizeof(uint8_t)*(max_rfid_id+1));
     thread_id = (pthread_t*)realloc(thread_id, sizeof(pthread_t)*(max_rfid_id+1));

@@ -8,7 +8,7 @@ COMPILER=gcc
 TARGET=main
 
 OBJ_DIR=obj
-HEADERS_DIR=headers
+HEADERS_DIR=includes
 DEPS_DIR=src
 LIB_DEPS_DIR=libs
 

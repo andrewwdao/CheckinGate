@@ -11,16 +11,16 @@ git clone https://github.com/minhan74/CheckinGate
 ### Build and run
 
 ```sh
-cd CheckinGate/main
+cd CheckinGate/main && mkdir obj && mkdir img
 make
 ./main
 ```
 
 ***
 
-## Optional: Setting up NTP server
+## Optional: Set up NTP server
 
-### Installing ntp
+### Install ntp
 
 ```sh
 sudo apt-get install ntp
@@ -34,9 +34,9 @@ sudo apt-get install ntp
 
 ***
 
-## Optional: Setting up FTP server
+## Optional: Set up FTP server
 
-### Installing `vsftpd`
+### Install `vsftpd`
   
 ```sh
 sudo apt-get install vsftpd
@@ -52,7 +52,7 @@ sudo apt-get install vsftpd
 - `user_sub_token=$USER`: Generate home directory for virtual users
 - `local_root=/home/$USER/ftp`: Fake root
 
-### Optional: Creating new user
+### Optional: Create new user
 
 ```sh
 sudo adduser <username>
@@ -68,15 +68,15 @@ sudo service vsftpd restart
 
 ***
 
-## Optional: Installing MariaDB Server (MySQL)
+## Optional: Install MariaDB Server (MySQL)
 
-### Installing `mariadb-server`
+### Install `mariadb-server`
   
 ```sh
 sudo apt-get install mariadb-server
 ```
 
-### Creating admin user
+### Create admin user
 
 - Run MySQL shell as `root`
 

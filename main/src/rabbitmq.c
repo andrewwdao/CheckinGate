@@ -17,13 +17,12 @@ int rabbitmq_init(const char* hostname, const char* username, const char* passwo
 	socket = amqp_tcp_socket_new(conn);
 	if (!socket) {
 		printf("Problem creating TCP socket\n");
-		return 1;
+		//return 1;
 	}
 
 	status = amqp_socket_open(socket, hostname, port);
 	if (status) {
 		printf("Problem opening TCP socket\n");
-		return 1;
 	}
 
 	amqp_login(conn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, username, password);

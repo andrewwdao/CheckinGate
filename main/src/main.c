@@ -52,8 +52,16 @@ pthread_t pir_thread_id;
 // --- UHF
 pthread_t uhf_thread_id;
 
+uint64_t now;
+
 #define capture_cam01()   system("./src/cam01 &")
 #define capture_cam02()   system("./src/cam02 &")
+
+uint64_t get_current_time() {
+	struct timeb ts;
+	ftime(&ts);
+	return (uint64_t)ts.time*1000ll + ts.millitm;
+}
 
 char* format_message(char* sensor, char* src, char* data) {
 	char* message = (char*)malloc(300);
@@ -67,7 +75,7 @@ char* format_message(char* sensor, char* src, char* data) {
 			"\"source\":\"%s\","
 			"\"data\":\"%s\""
 		"}",
-		(unsigned long long int)ts.time*1000ll + ts.millitm, sensor, src, data
+		now, sensor, src, data
 	);
 
 	return message;
@@ -104,8 +112,12 @@ void pir_isr_handler(uint8_t id) {
 	printf("PIR: %d\n", id);
 
 	if (pir_will_send[id]) {
-		if (id == 1) 	  {capture_cam01();}
-		else if (id == 2) {capture_cam02();}
+		now = get_current_time();
+		char cmd[50];
+		snprintf(cmd, 50, "./src/cam0%d pir%d %llu", id, id, now);
+		system(cmd);
+		//if (id == 1) 	  {capture_cam01();}
+		//else if (id == 2) {capture_cam02();}
 
 		pir_flags[id] = 1;
 		pthread_create(&pir_thread_id, NULL, pir_loop, NULL);
@@ -129,6 +141,8 @@ void rfid_timeout_handler(uint8_t id, uint32_t fullcode) {
 	snprintf(routing_key, 20, "%s.%s", ROUTING_KEY_PREFIX, rfid_src);
 	char data[20];
 	snprintf(data, 20, "tag_id:0x%06X", fullcode);
+
+	now = get_current_time();
 
 	if (run_rabbitmq)
 	send_message(format_message("rfid", rfid_src, data),

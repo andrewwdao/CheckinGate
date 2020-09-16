@@ -4,9 +4,10 @@ ffmpeg -i "rtsp://checkingate:admin123@192.168.1.101:554/cam/realmonitor?channel
 	-probesize 32 \
 	-analyzeduration 0 \
 	-rtsp_transport tcp \
-	-frames 2 \
+	-frames 1 \
 	-f image2 \
 	-v 0 \
-	img/cam01/img_$(date +%s)_%01d.jpg \
+	img/cam01/$1_$2_%01d.jpg \
 	-y \
 	&
+#img/cam01/img_$(date +%s)_%01d.jpg \

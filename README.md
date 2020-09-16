@@ -2,8 +2,6 @@
 
 ## Installation
 
-***
-
 ### Clone the project
 
 ```git
@@ -22,8 +20,6 @@ make
 
 ## Optional: Setting up NTP server
 
-***
-
 ### Installing ntp
 
 ```sh
@@ -39,8 +35,6 @@ sudo apt-get install ntp
 ***
 
 ## Optional: Setting up FTP server
-
-***
 
 ### Installing `vsftpd`
   
@@ -75,8 +69,6 @@ sudo service vsftpd restart
 ***
 
 ## Optional: Installing MariaDB Server (MySQL)
-
-***
 
 ### Installing `mariadb-server`
   
@@ -113,8 +105,6 @@ FLUSH PRIVILEGES;
 ***
 
 ## References
-
-***
 
 - [Setting up NTP server](http://raspberrypi.tomasgreno.cz/ntp-client-and-server.html)
 - [Setting up FTP server](https://www.raspberrypi-spy.co.uk/2018/05/creating-ftp-server-with-raspberry-pi/)

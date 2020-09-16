@@ -39,14 +39,17 @@
  -------------------------------------------------------------- */
 #ifndef __UHF_RS232_C
 #define __UHF_RS232_C
-#include <sys/time.h>
-#include <signal.h>
-#include <pthread.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <wiringPi.h>
 #include <wiringSerial.h>
 #include <errno.h> //errno
 #include <string.h> //strerror
-#include "uhf_rs232.h"
+
+#include <uhf.h>
+
 // ------ Private constants -----------------------------------
 #define BAUDRATE         115200
 #define PORT             "/dev/serial0" // /dev/ttyAMA0
@@ -57,12 +60,7 @@
 #define WIEGAND34_MODE     0x02
 #define WIEGAND26_MODE     0x03    
 
-// Read modes
-#define STANDARD_MODE      0x00
-#define WIEGAND34_MODE     0x02
-#define WIEGAND26_MODE     0x03    
-
-//Reader commands
+// Reader commands
 #define RESET_CMD          0x70
 #define READ_CMD           0x81
 #define WRITE_CMD          0x82
@@ -150,12 +148,12 @@ const char* __format_command(char* arr, uint8_t n)
 
     command[0] = HEADER;
     command[1] = n - 2; // Message length count from third byte
-    command[2] = DEFAULT_READER_ADDRESS;
+    command[2] = PUBLIC_ADDRESS;
     uint8_t i = 3;
     for (; i < n - 1; i++) command[i] = arr[i-3];
     command[i] = __get_checksum(command, i);
     //--- debug
-    // for (int j = 0; j < n; j++) printf("%02x ", command[j]); printf("\n"); fflush(stdout);
+    for (int j = 0; j < n; j++) printf("%02x ", command[j]); printf("\n"); fflush(stdout);
     return command;
 }
 
@@ -172,7 +170,7 @@ char* __get_hex_string(char* arr, uint8_t s, uint8_t e)
     char* end_of_str = str;
 
     for (uint8_t i = s; i < e; i++)
-        end_of_str += sprintf(end_of_str, "%02X ", arr[i]);
+        end_of_str += sprintf(end_of_str, "%02X", arr[i]);
 
     *end_of_str = '\0';
     return str;
@@ -198,6 +196,10 @@ char* __read_response_packet(uint8_t* packet_len)
             data[i+2] = serialGetchar(fd);
         
         *packet_len += 2; // return the full package length including header and package len itself
+
+        for (int i = 0; i < *packet_len; i++) printf("%02X ", data[i]);
+        printf("\n");
+
         return data;
     }
     *packet_len = 0;
@@ -214,11 +216,17 @@ void __reset_reader()
     serialPrintf(fd, __format_command(reset_cmd, len));
 }
 
+void __set_wiegand26()
+{
+    char cmd[] = {0xA0, WIEGAND26_MODE};
+    uint8_t len = (uint8_t)sizeof(cmd)/sizeof(cmd[0]);
+    serialPrintf(fd, __format_command(cmd, len));
+}
 
 /**
  * @brief Read tag
  */
-char* read_tag()
+char* uhf_read_tag()
 {
     // printf("\nRead tag: ");
     char read_cmd[] = {READ_CMD, membank, word_address, word_cnt};
@@ -236,7 +244,7 @@ char* read_tag()
 
     if (res_len != 0)
     {
-        if (res_len == 6) printf("Error: 0x%02X\n", res[4]);
+        if (res_len == 6) return "ERR";//printf("Error: 0x%02X\n", res[4]);
         else
         {
             if (__get_checksum(res, res_len-1) != res[res_len - 1]) printf("CHECKSUM FAILED");
@@ -249,7 +257,7 @@ char* read_tag()
                 // printf("EPC: %s\n", __get_hex_string(res, 9, 7 + data_len - read_len - 2));
                 // printf("CRC: %s\n", __get_hex_string(res, 7 + data_len - read_len - 2, 7 + data_len - read_len));
                 // printf("Full package: %s\n", __get_hex_string(res, 0, res_len));
-                printf("Read data: %s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
+                printf("UHF Read data: 0x%s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
                 fflush(stdout);
                 return __get_hex_string(res, 7 + data_len - read_len, 7 + data_len);
             }
@@ -259,7 +267,7 @@ char* read_tag()
     return "ERR";
 }
 
-char* realtime_inventory()
+char* uhf_realtime_inventory()
 {
     char rt_inv_cmd[] = {RT_INVENTORY_CMD, 255};
     uint8_t len = (uint8_t)sizeof(rt_inv_cmd)/sizeof(rt_inv_cmd[0]);
@@ -272,14 +280,20 @@ char* realtime_inventory()
 
     if (res_len != 0)
     {
-        if (res_len == 6) printf("Error: 0x%02X\n", res[4]);
+        // printf("res_len: %d data:", res_len);
+        // for (int i = 0; i < res_len; i++) printf("%02X ", res[i]);
+        // printf("\n");
+
+        if (res_len == 6) return "ERR";//printf("Error: 0x%02X\n", res[4]);
+        else if (res_len == 12) return "ERR"; // Filter out some random 12 bytes response, don't know why, fix later (maybe?)
         else
         {
             if (__get_checksum(res, res_len-1) != res[res_len - 1]) printf("CHECKSUM FAILED");
             else {
                 // printf("\nPC: %s", __get_hex_string(res, 5, 7));
                 // printf("\nRSSI: %s", __get_hex_string(res, res_len - 2, res_len - 1));
-                printf("\nEPC: %s", __get_hex_string(res, 7, res_len - 2));
+                // printf("\nEPC: %s", __get_hex_string(res, 7, res_len - 2));
+                printf("UHF EPC: 0x%s\n", __get_hex_string(res, 7, res_len-2));
                 fflush(stdout);
                 return __get_hex_string(res, 7, res_len - 2);
             }
@@ -289,7 +303,7 @@ char* realtime_inventory()
     return "ERR";
 }
 
-uint8_t set_param(uint8_t _membank, uint8_t _word_address, uint8_t _word_cnt)
+uint8_t uhf_set_param(uint8_t _membank, uint8_t _word_address, uint8_t _word_cnt)
 {
     membank = _membank;
     word_address = _word_address;
@@ -315,7 +329,6 @@ uint8_t set_param(uint8_t _membank, uint8_t _word_address, uint8_t _word_cnt)
 */
 uint8_t uhf_init(const char* port, uint32_t baudrate, uint8_t oepin) 
 {
-    printf("\nInit UHF RFID reader...\n");
     fflush(stdout);
     //-------------- Open connection -------------
     /** @brief initialize serial */
@@ -337,9 +350,11 @@ uint8_t uhf_init(const char* port, uint32_t baudrate, uint8_t oepin)
         digitalWrite(oepin, HIGH); //set it low to high to make it works
     }
 
+
+    __reset_reader();
+
     serialFlush(fd);
     __set_wiegand26();
-    __reset_reader();
 
     return 0;
 }//end uhf_init
@@ -348,7 +363,7 @@ uint8_t uhf_init(const char* port, uint32_t baudrate, uint8_t oepin)
 /**
  * @brief Show usage information for the user
 */
-void uhf_showUsage()
+void uhf_show_usage()
 {
     printf("\nHow to use:\n");
     printf("Type in the command line:\n");

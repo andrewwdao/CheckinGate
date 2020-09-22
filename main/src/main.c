@@ -68,34 +68,100 @@
 
 // --- Camera parameter
 #define IMAGE_DIR 	  "./img"
+pthread_t camera_thread_id;
 // ------------------------- Variables -----------------------------------
 // --- PIR
 uint8_t pir_flags[PIR_CNT+1] = {0,0,0,0,0};
-uint8_t pir_will_send[PIR_CNT+1] = {1,1,1,1,1};
+uint8_t pir_debounce_flag[PIR_CNT+1] = {1,1,1,1,1};
 pthread_t pir_thread_id;
 // --- UHF
 pthread_t uhf_thread_id;
 // --- Keep track of time
 uint64_t now;
 
+// ------ Private function prototypes -------------------------
+void* img_erase_thread(void*);
+void* pir_send_thread(void*);
+void* uhf_thread(void*);
+void camera_init(void);
+uint64_t get_current_time(void);
+char* format_message(char*, char*, char*);
+void pir_isr_handler(uint8_t);
+void rfid_timeout_handler(uint8_t, uint32_t);
+void uhf_read_handler(char*);
 //--------------------------------------------------------------
 // FUNCTION DEFINITIONS
 //--------------------------------------------------------------
 /**
+ *  @brief separate thread for waiting and deleting first startup images for the camera
+ *  @param arg void argument for the thread to be created
+ *  @return void*
+ */
+void* img_erase_thread(void* arg)
+{
+	char cmd[50];
+	usleep(2500000); //us - needed time for image to be created before removed
+	snprintf(cmd, 50,  "rm -f %s/*.jpg", IMAGE_DIR);
+	system(cmd);
+}
+
+/**
+ *  @brief send pir interrupt signal to rabbitMQ
+ *  @param arg id of the pir to be sent
+ *  @return void*
+ */
+void* pir_send_thread(void* arg) {
+	uint8_t id = *(uint8_t*)arg;
+	pir_debounce_flag[id] = 0;
+
+	if (en_rabbitmq) {
+		char pir_src[10];
+		snprintf(pir_src, 10, "pir.%d", id);
+		char routing_key[30];
+		snprintf(routing_key, 20, "%s.%s", ROUTING_KEY_PREFIX, pir_src);
+		char data[20];
+		snprintf(data, 10, "pir_id:%d", id);
+
+		send_message(format_message("pir", pir_src, data),
+				 	 EXCHANGE_NAME, routing_key);
+	}
+
+	// Remove these lines if threads are used
+	usleep(PIR_DEBOUNCE);
+	pir_debounce_flag[id] = 1;
+}
+
+/**
+ *  @brief UHF always-on thread to catch RS232 signal
+ *  @note: This function will be replaced when wiegand26 protocol is applied for UHF reader
+ *  @param arg void argument for the thread to be created
+ *  @return void*
+ */
+void* uhf_thread(void* arg) {
+	while(1) uhf_read_handler(uhf_realtime_inventory());
+	// uhf_read_tag();
+	// while(1) uhf_read_handler(uhf_read_tag());
+}
+
+
+/**
  *  @brief first connection to the camera stream to make it ready
  */
-void camera_init()
+void camera_init(void)
 {
 	char cmd[100];
-	snprintf(cmd, 100, "(./src/cam01 %s 0 0 && ./src/cam02 %s 0 0 && rm -rf %s/*.jpg) &",IMAGE_DIR, IMAGE_DIR, IMAGE_DIR);
+	//snprintf(cmd, 50, "./src/cam01 %s 0 0 && ./src/cam02 %s 1 1",IMAGE_DIR, IMAGE_DIR);
+	snprintf(cmd, 100, "./src/cam %s 0", IMAGE_DIR);
 	system(cmd);
+	pthread_create(&camera_thread_id, NULL, img_erase_thread, NULL);
+
 }
 
 /**
  *  @brief Get current system time
  *  @return system time in millisecond
  */
-uint64_t get_current_time()
+uint64_t get_current_time(void)
 {
 	struct timeb ts;
 	ftime(&ts);
@@ -129,54 +195,21 @@ char* format_message(char* sensor, char* src, char* data)
 }
 
 /**
- *  @brief send pir interrupt signal to rabbitMQ
- *  @param arg id of the pir to be sent
- *  @return void*
- */
-void* pir_send(void* arg) {
-	uint8_t id = *(uint8_t*)arg;
-	// pir_flags[id] = 0;
-	pir_will_send[id] = 0;
-
-	if (en_rabbitmq) {
-		char pir_src[10];
-		snprintf(pir_src, 10, "pir.%d", id);
-		char routing_key[30];
-		snprintf(routing_key, 20, "%s.%s", ROUTING_KEY_PREFIX, pir_src);
-		char data[20];
-		snprintf(data, 10, "pir_id:%d", id);
-
-		send_message(format_message("pir", pir_src, data),
-				 	 EXCHANGE_NAME, routing_key);
-	}
-
-	// Remove these lines if threads are used
-	usleep(PIR_DEBOUNCE);
-	pir_will_send[id] = 1;
-}
-
-// void* pir_loop(void* arg) {
-// 	for (uint8_t i = 1; i <= PIR_CNT; i++) {
-// 		if (pir_flags[i]) pir_send(i);
-// 	}
-// }
-
-/**
  *  @brief ISR handler for PIR sensors
  *  @param id id of the pir to be sent
  */
 void pir_isr_handler(uint8_t id) {
 	printf("PIR: %d\n", id);
 
-	if (pir_will_send[id]) {
+	if (pir_debounce_flag[id]) {
+		fflush(stdout);
 		now = get_current_time();
 		// --- capture camera
 		char cmd[100];
-		snprintf(cmd, 100, "./src/cam0%d %s pir%d %llu", id, IMAGE_DIR, id, now);
+		snprintf(cmd, 100, "./src/cam %s %d %llu", IMAGE_DIR, id, now);
 		system(cmd);
 
-		// pir_flags[id] = 1;
-		pthread_create(&pir_thread_id, NULL, pir_send, &id);
+		pthread_create(&pir_thread_id, NULL, pir_send_thread, &id);
 	}
 }
 
@@ -229,17 +262,6 @@ void uhf_read_handler(char* read_data) {
 				 EXCHANGE_NAME, routing_key);
 }
 
-/**
- *  @brief UHF always-on thread to catch RS232 signal
- *  @note: This function will be replaced when wiegand26 protocol is applied for UHF reader
- *  @param arg void argument for the thread to be created
- *  @return void*
- */
-void* uhf_thread(void* arg) {
-	while(1) uhf_read_handler(uhf_realtime_inventory());
-	// uhf_read_tag();
-	// while(1) uhf_read_handler(uhf_read_tag());
-}
 
 int main() {
 

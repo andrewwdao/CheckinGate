@@ -7,10 +7,11 @@ COMPILER=gcc
 
 TARGET=main
 
-OBJ_DIR=obj
 HEADERS_DIR=includes
 DEPS_DIR=src
 LIB_DEPS_DIR=libs
+OBJ_DIR=$(DEPS_DIR)/obj
+
 
 DEPS_=pir rabbitmq rfid uhf
 DEPS=$(DEPS_:%=$(OBJ_DIR)/%.o)

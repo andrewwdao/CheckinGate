@@ -62,6 +62,11 @@
 #define RT_INVENTORY_CMD   0x89 // Real time inventory
 #define GET_READER_ID_CMD  0x68 // Get reader identifier
 #define BUZZER_CMD         0x7A
+#define MODE_CMD           0xA0
+// Reader modes
+#define STANDARD          0x00
+#define WIEGAND34         0x02
+#define WIEGAND26         0x03
 
 // Buzzer modes
 #define BUZZER_QUIET      0x00
@@ -135,7 +140,7 @@ char __get_checksum(char* uBuff, uint8_t uLength)
  *  @param arr the command to be formatted
  *  @param n length of the command array
  */
-const char* __format_command(char* arr, uint8_t n)
+char* __format_command(char* arr, uint8_t n)
 {
     n += 4;
     // [header, length, reader_address, command, checksum]
@@ -203,9 +208,38 @@ char* __read_response_packet(uint8_t* packet_len)
  */
 void __reset_reader() 
 {
-    char reset_cmd[] = {RESET_CMD};
-    uint8_t len = (uint8_t)sizeof(reset_cmd)/sizeof(reset_cmd[0]);
-    serialPrintf(fd, __format_command(reset_cmd, len));
+    // char reset_cmd[] = {RESET_CMD};
+    // uint8_t len = (uint8_t)sizeof(reset_cmd)/sizeof(reset_cmd[0]);
+    // serialPrintf(fd, __format_command(reset_cmd, len));
+    char cmd[] = {HEADER, 0x03, DEFAULT_READER_ADDRESS, RESET_CMD, 0xec};
+    serialPrintf(fd, cmd);
+}
+
+void __setmode_standard() 
+{
+    // char reset_cmd[] = {RESET_CMD};
+    // uint8_t len = (uint8_t)sizeof(reset_cmd)/sizeof(reset_cmd[0]);
+    // serialPrintf(fd, __format_command(reset_cmd, len));
+    char cmd[] = {HEADER, 0x04, DEFAULT_READER_ADDRESS, MODE_CMD, STANDARD, 0xBD};
+    serialPrintf(fd, cmd);
+}
+
+void __setmode_wiegand26() 
+{
+    // char reset_cmd[] = {RESET_CMD};
+    // uint8_t len = (uint8_t)sizeof(reset_cmd)/sizeof(reset_cmd[0]);
+    // serialPrintf(fd, __format_command(reset_cmd, len));
+    char cmd[] = {HEADER, 0x04, DEFAULT_READER_ADDRESS, MODE_CMD, WIEGAND26, 0xB8};
+    serialPrintf(fd, cmd);
+}
+
+void __setmode_wiegand34() 
+{
+    // char reset_cmd[] = {RESET_CMD};
+    // uint8_t len = (uint8_t)sizeof(reset_cmd)/sizeof(reset_cmd[0]);
+    // serialPrintf(fd, __format_command(reset_cmd, len));
+    char cmd[] = {HEADER, 0x04, DEFAULT_READER_ADDRESS, MODE_CMD, WIEGAND34, 0x00};
+    serialPrintf(fd, cmd);
 }
 
 /**
@@ -214,10 +248,12 @@ void __reset_reader()
 char* uhf_read_tag()
 {
     // printf("\nRead tag: ");
-    char read_cmd[] = {READ_CMD, membank, word_address, word_cnt};
-    uint8_t len = (uint8_t)sizeof(read_cmd)/sizeof(read_cmd[0]);
-    serialPrintf(fd, __format_command(read_cmd, len));
-
+    char cmd[] = {READ_CMD, membank, word_address, word_cnt};
+    uint8_t len = (uint8_t)sizeof(cmd)/sizeof(cmd[0]);
+    char* formatted_cmd = __format_command(cmd, len);
+    serialPrintf(fd, formatted_cmd);
+    if (formatted_cmd) free(formatted_cmd);
+    
     usleep(10000); // us
 
     uint8_t res_len;
@@ -254,9 +290,11 @@ char* uhf_read_tag()
 
 char* uhf_realtime_inventory()
 {
-    char rt_inv_cmd[] = {RT_INVENTORY_CMD, 255};
-    uint8_t len = (uint8_t)sizeof(rt_inv_cmd)/sizeof(rt_inv_cmd[0]);
-    serialPrintf(fd, __format_command(rt_inv_cmd, len));
+    char cmd[] = {RT_INVENTORY_CMD, 255};
+    uint8_t len = (uint8_t)sizeof(cmd)/sizeof(cmd[0]);
+    char* formatted_cmd = __format_command(cmd, len);
+    serialPrintf(fd, formatted_cmd);
+    if (formatted_cmd) free(formatted_cmd);
 
     usleep(1000);
 

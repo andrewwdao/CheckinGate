@@ -1,6 +1,7 @@
 # from send_to_rabbitmq import Sensor
 
 import serial
+import time
 
 DEFAULT_BAUDRATE        = 115200
 DEFAULT_SERIAL_PORT     = '/dev/serial0'
@@ -137,6 +138,9 @@ class UHFReader():
     
     def reset_reader(self):
         self.ser.write(self.format_command([RESET_CMD]))
+
+    def setmode_standard(self):
+        self.ser.write(self.format_command([0xa0,0x00]))
 
     
     def read_tag(self, membank=TID_MEMBANK, word_address=0x00, word_cnt=0x01):
@@ -275,6 +279,8 @@ class UHFReader():
 
 uhf = UHFReader()
 uhf.open_connection()
+uhf.setmode_standard()
+time.sleep(1)
 uhf.reset_reader()
 
 # uhf.set_beeper_mode(BUZZER_TAG)

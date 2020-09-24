@@ -150,7 +150,6 @@ void* uhf_thread(void* arg) {
 void camera_init(void)
 {
 	char cmd[100];
-	//snprintf(cmd, 50, "./src/cam01 %s 0 0 && ./src/cam02 %s 1 1",IMAGE_DIR, IMAGE_DIR);
 	snprintf(cmd, 100, "./src/cam %s 0", IMAGE_DIR);
 	system(cmd);
 	pthread_create(&camera_thread_id, NULL, img_erase_thread, NULL);
@@ -219,9 +218,9 @@ void pir_isr_handler(uint8_t id) {
  *  @param fullcode tag ID of the RFID
  */
 void rfid_timeout_handler(uint8_t id, uint32_t fullcode) {
-
+	++id;
 	if (!fullcode) {
-		printf("RFID %d: CHECKSUM FAILED\n", ++id);
+		printf("RFID %d: CHECKSUM FAILED\n", id);
 		return;
 	}
 

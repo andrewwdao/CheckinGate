@@ -11,3 +11,9 @@ ffmpeg -i "rtsp://checkingate:admin123@192.168.1.10$2:554/cam/realmonitor?channe
 	-y \
 	&
 #img/cam01/img_$(date +%s)_%01d.jpg \
+
+cd $1
+excess=`expr $(ls | wc -l) - $4`
+if [ $excess -gt 0 ]; then
+	rm $(ls | head -n$excess)
+fi

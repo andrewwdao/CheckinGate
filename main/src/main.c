@@ -46,12 +46,10 @@
 #define PORT 				5672
 
 // --- PIR parameters
-#define PIR_CNT 4
+#define PIR_CNT	   2
 #define PIR_DEBOUNCE 200000 //us
 #define PIR_1_PIN  4 //wiringpi pin
 #define PIR_2_PIN  5 //wiringpi pin
-#define PIR_3_PIN -1 //wiringpi pin
-#define PIR_4_PIN -1 //wiringpi pin
 
 // --- RFID parameters
 #define MAIN_RFID_1 0 //index for rfid module 1
@@ -67,12 +65,13 @@
 #define UHF_BAUDRATE  115200
 
 // --- Camera parameter
+#define IMAGE_LIMIT	  30
 #define IMAGE_DIR 	  "./img"
 pthread_t camera_thread_id;
 // ------------------------- Variables -----------------------------------
 // --- PIR
-uint8_t pir_flags[PIR_CNT+1] = {0,0,0,0,0};
-uint8_t pir_debounce_flag[PIR_CNT+1] = {1,1,1,1,1};
+uint8_t pir_flags[PIR_CNT+1]; //2 pir sensor but we want the index to start at 1
+uint8_t pir_debounce_flag[PIR_CNT+1]; //2 pir sensor but we want the index to start at 1
 pthread_t pir_thread_id;
 // --- UHF
 pthread_t uhf_thread_id;
@@ -150,7 +149,7 @@ void* uhf_thread(void* arg) {
 void camera_init(void)
 {
 	char cmd[100];
-	snprintf(cmd, 100, "./src/cam %s 0", IMAGE_DIR);
+	snprintf(cmd, 100, "./src/cam %s 0 0 %d", IMAGE_DIR, IMAGE_LIMIT);
 	system(cmd);
 	pthread_create(&camera_thread_id, NULL, img_erase_thread, NULL);
 
@@ -205,7 +204,7 @@ void pir_isr_handler(uint8_t id) {
 		now = get_current_time();
 		// --- capture camera
 		char cmd[100];
-		snprintf(cmd, 100, "./src/cam %s %d %llu", IMAGE_DIR, id, now);
+		snprintf(cmd, 100, "./src/cam %s %d %llu %d", IMAGE_DIR, id, now, IMAGE_LIMIT);
 		system(cmd);
 
 		pthread_create(&pir_thread_id, NULL, pir_send_thread, &id);
@@ -271,8 +270,9 @@ int main() {
 
 	if (en_pir) {
 		printf("Init PIRs...\n");
+		for (uint8_t i=0;i<=PIR_CNT;i++) *(pir_flags+i)= !(*(pir_debounce_flag+i) = 1); //set all pir_flags to 0 and all pir_debounce_flag to 1 
 		pir_set_ext_isr(pir_isr_handler);
-		pir_init(PIR_1_PIN, PIR_2_PIN, PIR_3_PIN, PIR_4_PIN);
+		pir_init(PIR_1_PIN, PIR_2_PIN);
 	}
 
 	if (en_rfid) {

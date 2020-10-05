@@ -78,9 +78,8 @@ app.get('/export-date', (req, res) => {
 
 //export-date
 app.post('/export-date', async (req, res) => {
-  let StartDate = moment(req.body.txtStartDay + '00:00:00', 'DD/MM/YYYY HH:mm:ss').valueOf();
-  let EndDate = moment(req.body.txtEndDay + '23:59:59', 'DD/MM/YYYY HH:mm:ss').valueOf();
-
+  let StartDate = moment(req.body.txtStartDay + ' 00:00:00', 'DD/MM/YYYY HH:mm:ss').valueOf();
+  let EndDate = moment(req.body.txtEndDay + ' 23:59:59', 'DD/MM/YYYY HH:mm:ss').valueOf();
   console.log(`${StartDate}  ${EndDate}`);
   if (StartDate > EndDate) {
     res.send('Ngày bắt đầu phải bé hơn ngày kết thúc');
@@ -97,65 +96,59 @@ app.post('/export-date', async (req, res) => {
       }
       await fs.readdirSync(uploadImage).forEach((file) => {
         var fileName = file.split('_');
-        if (fileName[0] > StartDate && fileName[0] < EndDate) {
-          fs.copyFile(__dirname + '/public/images/' + file, __dirname + '/public/exports/images/' + file, (err) => {
+        //console.log(file);
+        if (fileName[0] >= StartDate && fileName[0] <= EndDate) {
+          fs.copyFile(__dirname + '/public/images/' + file, __dirname + '/public/exports/images/' + file, async (err) => {
             if (err) return console.error(err);
-            // console.log(file);
+            console.log(file);
           });
         }
       });
     });
+    //###########################################################################//
 
     //WHERE timestamp >= ${StartDate} AND timestamp <= ${EndDate}
-    let sql = `SELECT * FROM checkin_events WHERE timestamp >= ${StartDate} AND timestamp <= ${EndDate}`;
+    let sql = `SELECT gateId, datetime, direction, rfidTag, personalName, personalCode, data FROM checkin_events as c, events as e WHERE e.timestamp >= ${StartDate} AND e.timestamp <= ${EndDate} AND e.timestamp = c.timestamp`;
     //console.log(sql);
     conn.query(sql, async function (err, result) {
       if (err) {
         console.log(err);
       } else {
         const jsonExport = JSON.parse(JSON.stringify(result));
-
-        //for (let i = 0; i < result.length; i++) jsonExport[i]['image'] = 'images/' + jsonExport[i]['timestamp'] + '.jpg';
-
-        //console.log(jsonExport);
         let workExcel = new excel.Workbook();
         let worksheet = workExcel.addWorksheet('check-in');
 
         //  WorkSheet Header
         worksheet.columns = [
-          { header: 'gateId', key: 'gateId', width: 10 },
-          { header: 'timestamp', key: 'timestamp', width: 20 },
-          { header: 'datetime', key: 'datetime', width: 20 },
-          { header: 'direction', key: 'direction', width: 20 },
-          { header: 'rfidTag', key: 'rfidTag', width: 20 },
-          { header: 'personalName', key: 'personalName', width: 20 },
-          {
-            header: 'personalCode',
-            key: `personalCode`,
-            width: 20,
-          },
-          {
-            header: 'image',
-            key: 'image',
-            width: 30,
-            outlineLevel: 1,
-          },
+          { header: 'Gate ID', key: 'gateId', width: 10 },
+          //{ header: 'timestamp', key: 'timestamp', width: 20 },
+          { header: 'Date time', key: 'datetime', width: 20 },
+          { header: 'Direction', key: 'direction', width: 20 },
+          { header: 'RFID Tag', key: 'rfidTag', width: 20 },
+          { header: 'Personal name', key: 'personalName', width: 20 },
+          { header: 'Personal code', key: `personalCode`, width: 20, },
+		  {
+		  	header: 'Image',
+			key: 'data',
+			width: 10,
+		  }
         ];
 
         // Add Array Rows
         worksheet.addRows(jsonExport);
-        // var i = 1;
-        // let j = i + 1;
-        // worksheet.spliceRows(1, 0, jsonExport);
-        for (let i = 0; i < jsonExport.length; i++) {
-          // note ***
-          let cell = worksheet.getRow(i).getCell('image');
-          cell.value = {
-            text: 'images/' + jsonExport[i]['timestamp'] + '_pir1.jpg',
-            hyperlink: 'images/' + jsonExport[i]['timestamp'] + '_pir1.jpg',
-            tooltip: 'images/' + jsonExport[i]['timestamp'] + '_pir1.jpg',
-          };
-        }
+		for (let i = 2; i <= jsonExport.length + 1; i++) {
+			let dataCol = worksheet.getRow(i).getCell('data');
+			let timestamp = dataCol.value.split(',')[1].split(':')[1];
+			let pir = worksheet.getRow(i).getCell('direction') == 'ra' ? 'pir1' : 'pir2';
+
+			let imageCell = worksheet.getRow(i).getCell('data');
+			imageCell.value = {
+				text: 'View image',
+				hyperlink: 'images/' + timestamp + '_' + pir + '_1.jpg',
+				tooltip: 'images/' + timestamp + '_' + pir + '_1.jpg',
+			}
+			imageCell.font = { color: { argb: '000004db'}};
+		}
 
         // Write to File
         const EE = await workExcel.xlsx.writeFile(__dirname + '/public/exports/' + 'check-in.xlsx').then(function () {

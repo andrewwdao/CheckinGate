@@ -1,0 +1,22 @@
+<%- include('layout/header'); -%>
+<div class="container-fluid">
+  <div class="jumbotron text-center">
+    <h1 class="display-4">UPLOAD FILE EXCEL ADMIN</h1>
+  </div>
+  <div class="row justify-content-md-center">
+    <div class="col-md-4">
+      <form action="uploadexcel" method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="exampleInputEmail1">FILE UPLOAD </label>
+          <input type="file" name="fileExcel" class="form-control" />
+          <small id="emailHelp" class="form-text text-muted"
+            >Please input file excel</small
+          >
+        </div>
+
+        <button type="submit" class="btn btn-success btn-block">Upload</button>
+      </form>
+    </div>
+  </div>
+</div>
+<%- include('layout/footer.ejs'); -%>

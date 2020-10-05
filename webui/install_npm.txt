@@ -1,0 +1,4 @@
+npm install
+
+run app :
+node index.js

@@ -1,0 +1,25 @@
+<%- include('layout/header'); -%>
+<div class="container-fluid">
+  <div class="jumbotron text-center">
+    <h1 class="display-4">EXPORT FROM DATE</h1>
+  </div>
+  <div class="row justify-content-md-center">
+    <div class="col-md-4">
+      <form action="export-date" method="POST">
+        <div class="form-group">
+          <label for="exampleInputEmail1">Start date </label>
+          <input id="StartDate" name="txtStartDay" class="form-control" id="exampleInputEmail1" placeholder="Enter date" required />
+          <small id="emailHelp" class="form-text text-muted">Please input all infomation</small>
+        </div>
+        <div class="form-group">
+          <label for="exampleInputEmail1">End date </label>
+          <input id="EndDay" name="txtEndDay" class="form-control" id="exampleInputEmail1" placeholder="Enter date" required />
+          <small id="emailHelp" class="form-text text-muted">Please input all infomation</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Export</button>
+      </form>
+    </div>
+  </div>
+</div>
+<%- include('layout/footer.ejs'); -%>

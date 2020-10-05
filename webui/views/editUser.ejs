@@ -1,0 +1,32 @@
+<%- include('layout/header'); -%>
+<div class="container-fluid">
+  <div class="jumbotron text-center">
+    <h1 class="display-4">EDIT ADMIN</h1>
+  </div>
+  <div class="row justify-content-md-center">
+    <div class="col-md-4">
+      <form action="edit" method="POST">
+        <input type="hidden" name="userId" value="<%- user[0].id %>" />
+        <div class="form-group">
+          <label for="exampleInputEmail1"> Họ Tên </label>
+          <input name="txtHoten" class="form-control" value="<%- user[0].ho_ten %>" />
+        </div>
+        <div class="form-group">
+          <label for="exampleInputEmail1">Đơn vị</label>
+          <input name="txtDonvi" class="form-control" value="<%- user[0].don_vi %>" />
+        </div>
+        <div class="form-group">
+          <label for="exampleInputEmail1"> Điện thoại </label>
+          <input
+            name="txtDienthoai"
+            class="form-control"
+            value="<%- user[0].dien_thoai %>"
+          />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Sủa thông tin</button>
+      </form>
+    </div>
+  </div>
+</div>
+<%- include('layout/footer.ejs'); -%>

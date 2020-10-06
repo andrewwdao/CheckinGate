@@ -131,7 +131,12 @@ app.post('/export-date', async (req, res) => {
 		  	header: 'Image',
 			key: 'data',
 			width: 10,
-		  }
+		  },
+		  {
+		  	header: 'Image 2',
+			key: 'data2',
+			width: 10,
+		  },
         ];
 
         // Add Array Rows
@@ -144,10 +149,19 @@ app.post('/export-date', async (req, res) => {
 			let imageCell = worksheet.getRow(i).getCell('data');
 			imageCell.value = {
 				text: 'View image',
-				hyperlink: 'images/' + timestamp + '_' + pir + '_1.jpg',
-				tooltip: 'images/' + timestamp + '_' + pir + '_1.jpg',
+				hyperlink: 'images/' + timestamp + '_pir1_1.jpg',
+				tooltip: 'images/' + timestamp + '_pir1_1.jpg',
 			}
 			imageCell.font = { color: { argb: '000004db'}};
+
+
+			let imageCell2 = worksheet.getRow(i).getCell('data2');
+			imageCell2.value = {
+				text: 'View image',
+				hyperlink: 'images/' + timestamp + '_pir2_1.jpg',
+				tooltip: 'images/' + timestamp + '_pir2_1.jpg',
+			}
+			imageCell2.font = { color: { argb: '000004db'}};
 		}
 
         // Write to File

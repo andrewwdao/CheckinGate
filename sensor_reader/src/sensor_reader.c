@@ -65,7 +65,7 @@
 #define UHF_BAUDRATE  115200
 
 // --- Camera parameter
-#define IMAGE_LIMIT	  30
+#define IMAGE_LIMIT	  10000
 #define IMAGE_DIR 	  "./web/public/images"
 pthread_t camera_thread_id;
 // ------------------------- Variables -----------------------------------
@@ -205,8 +205,12 @@ void pir_isr_handler(uint8_t id) {
 		now = get_current_time();
 		// --- capture camera
 		char cmd[100];
-		snprintf(cmd, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, id, now, IMAGE_LIMIT);
+		snprintf(cmd, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 1, now, IMAGE_LIMIT);
 		system(cmd);
+
+		char cmd2[100];
+		snprintf(cmd2, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 2, now, IMAGE_LIMIT);
+		system(cmd2);
 
 		pthread_create(&pir_thread_id, NULL, pir_send_thread, &id);
 	}

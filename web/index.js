@@ -240,9 +240,10 @@ app.get('/uploadexcel', (req, res) => {
   res.render('excel', { HOST, PORT });
 });
 
+
 app.post('/uploadexcel', (req, res) => {
   upload(req, res, function (err) {
-    //console.log(req.file);
+    // console.log(req.file);
     if (err instanceof multer.MulterError) {
       console.log('Đã xảy ra lỗi Multer khi tải lên.');
     } else if (err) {
@@ -264,7 +265,8 @@ app.post('/uploadexcel', (req, res) => {
         var sql = `INSERT IGNORE  INTO nhan_vien ( manv, rfid_tag, ho_ten ,don_vi ,dien_thoai ,email) VALUES ?`;
 
         conn.query(sql, [rows], function (err, result) {
-          //console.log(result);
+          // console.log(result);
+          console.log(rows);
           if (err) {
             //console.log(err);
             if (err.code === 'ER_DUP_ENTRY') console.log('duplicate');

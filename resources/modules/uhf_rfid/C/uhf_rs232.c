@@ -52,10 +52,6 @@
 #define PORT             "/dev/serial0" // /dev/ttyAMA0
 #define ACCESS_PASSWORD  [0x00, 0x00, 0x00, 0x00]
 
-// Read modes
-#define STANDARD_MODE      0x00
-#define WIEGAND34_MODE     0x02
-#define WIEGAND26_MODE     0x03    
 
 // Read modes
 #define STANDARD_MODE      0x00
@@ -155,7 +151,7 @@ const char* __format_command(char* arr, uint8_t n)
     for (; i < n - 1; i++) command[i] = arr[i-3];
     command[i] = __get_checksum(command, i);
     //--- debug
-    // for (int j = 0; j < n; j++) printf("%02x ", command[j]); printf("\n"); fflush(stdout);
+    for (int j = 0; j < n; j++) printf("%02x ", command[j]); printf("\n"); fflush(stdout);
     return command;
 }
 
@@ -212,6 +208,13 @@ void __reset_reader()
     char reset_cmd[] = {RESET_CMD};
     uint8_t len = (uint8_t)sizeof(reset_cmd)/sizeof(reset_cmd[0]);
     serialPrintf(fd, __format_command(reset_cmd, len));
+}
+
+void __set_mode(uint8_t mode)
+{
+	char cmd[] = {0xA0, mode};
+	uint8_t len = (uint8_t)sizeof(cmd)/sizeof(cmd[0]);
+	serialPrintf(fd, __format_command(cmd,len));
 }
 
 
@@ -338,8 +341,8 @@ uint8_t uhf_init(const char* port, uint32_t baudrate, uint8_t oepin)
     }
 
     serialFlush(fd);
-    __set_wiegand26();
-    __reset_reader();
+    //__reset_reader();
+    __set_mode(STANDARD_MODE);
 
     return 0;
 }//end uhf_init

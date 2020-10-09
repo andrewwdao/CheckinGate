@@ -14,6 +14,11 @@ WRITE_CMD         = 0x82
 RT_INVENTORY_CMD  = 0x89 # Real time inventory
 GET_READER_ID_CMD = 0x68 # Get reader identifier
 BUZZER_CMD        = 0x7A
+SET_MODE_CMD	  = 0xA0
+
+# Reader modes
+STANDARD_MODE	  = 0x00
+WIEGAND26_MODE	  = 0x03
 
 # Buzzer modes
 BUZZER_QUIET     = 0x00
@@ -138,6 +143,9 @@ class UHFReader():
     
     def reset_reader(self):
         self.ser.write(self.format_command([RESET_CMD]))
+
+    def set_reader_mode(self, mode):
+        self.ser.write(self.format_command([SET_MODE_CMD, mode]))
 
     def setmode_standard(self):
         self.ser.write(self.format_command([0xa0,0x00]))
@@ -279,9 +287,11 @@ class UHFReader():
 
 uhf = UHFReader()
 uhf.open_connection()
-uhf.setmode_standard()
+# uhf.setmode_standard()
 time.sleep(1)
-uhf.reset_reader()
+# uhf.reset_reader()
+
+uhf.set_reader_mode(WIEGAND26_MODE)
 
 # uhf.set_beeper_mode(BUZZER_TAG)
 # uhf.write_tag(data=[0x00, 0x00, 0x00, 0x00],
@@ -293,13 +303,13 @@ uhf.reset_reader()
 uhf.read_output()
 # uhf.read_tag(membank=TID_MEMBANK, word_address=0x01, word_cnt=11)
 
-while True:
-    # uhf.realtime_inventory_start()
-    # uhf.read_realtime_inventory()
+while False:
+    uhf.realtime_inventory_start()
+    uhf.read_realtime_inventory()
     # print("\nPress enter to read tag...")
     # input()
 
     # Read 12 words (16 bit each) to get 24 bytes (PC + EPC + CRC not included)
-    tag = uhf.read_tag(membank=TID_MEMBANK, word_address=0x01, word_cnt=11)
+    # tag = uhf.read_tag(membank=TID_MEMBANK, word_address=0x01, word_cnt=11)
     # if tag:
     #     sensor.send_message(sensor.format_message('tagid:' + tag.replace(' ', '')))

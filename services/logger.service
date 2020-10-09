@@ -1,0 +1,16 @@
+[Unit]
+Description=Logger service
+DefaultDependencies=true
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=java -jar checkingate.jar vn.mekosoft.checkin.logger.Main
+WorkingDirectory=/home/pi/demo1.checkingate.mekosoft.vn
+Restart=always
+RestartSec=1000ms
+
+[Install]
+# WantedBy=sysinit.target multi-user.target
+
+# reference: https://www.raspberrypi.org/forums/viewtopic.php?t=221507

@@ -1,14 +1,33 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <malloc.h>
+#include <string.h>
 
 #include <amqp_tcp_socket.h>
 
 #include <rabbitmq.h>
+#include <pthread.h>
 
 amqp_connection_state_t conn;
 amqp_basic_properties_t props;
 
-int rabbitmq_init(const char* hostname, const char* username, const char* password, int port) {
+char *hostname, *username, *password;
+int port;
+
+void rabbitmq_set_connection_params(const char* hostname_, const char* username_, const char* password_, int port_) {
+	hostname = (char*)malloc(sizeof(char)*strlen(hostname_)+1);
+	strcpy(hostname, hostname_);
+
+	username = (char*)malloc(sizeof(char)*strlen(username_)+1);
+	strcpy(username, username_);
+
+	password = (char*)malloc(sizeof(char)*strlen(password_)+1);
+	strcpy(password, password_);
+
+	port = port_;
+}
+
+int rabbitmq_init() {
 	int status;
 
 	conn = amqp_new_connection();
@@ -25,7 +44,7 @@ int rabbitmq_init(const char* hostname, const char* username, const char* passwo
 		printf("Problem opening TCP socket\n");
 	}
 
-	amqp_login(conn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, username, password);
+	amqp_login(conn, "/", 0, 131072, 30, AMQP_SASL_METHOD_PLAIN, username, password);
 	amqp_channel_open(conn, 1);
 	amqp_get_rpc_reply(conn);
 
@@ -37,9 +56,15 @@ int rabbitmq_init(const char* hostname, const char* username, const char* passwo
 }
 
 void send_message(char* message, char* exchange, char* routingkey) {
-	amqp_basic_publish(conn, 1, amqp_cstring_bytes(exchange),
-					   amqp_cstring_bytes(routingkey), 0, 0,
-					   &props, amqp_cstring_bytes(message));
+	int status = amqp_basic_publish(conn, 1, amqp_cstring_bytes(exchange),
+							  amqp_cstring_bytes(routingkey), 0, 0,
+							  &props, amqp_cstring_bytes(message));
+
+	if (status != AMQP_STATUS_OK) {
+		rabbitmq_init();
+		send_message(message, exchange, routingkey);
+		printf("CONNECTION RECOVERED!\n");
+	}
 }
 
 void close_connection() {
@@ -47,4 +72,3 @@ void close_connection() {
 	amqp_connection_close(conn, AMQP_REPLY_SUCCESS);
 	amqp_destroy_connection(conn);
 }
-

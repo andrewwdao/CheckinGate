@@ -137,9 +137,19 @@ void* pir_send_thread(void* arg) {
  *  @return void*
  */
 void* uhf_thread(void* arg) {
-	while(1) uhf_read_handler(uhf_realtime_inventory());
+	while(1) {
+		char* data = uhf_realtime_inventory();
+		
+		if (!(data[0] == 'E' && data[1] == 'R' &&
+			data[2] == 'R' && data[3] == '\0')) {
+			uhf_read_handler(data);
+		}
+	}
 	// uhf_read_tag();
-	// while(1) uhf_read_handler(uhf_read_tag());
+	// while(1) {
+	// 	char* data = uhf_read_tag();
+	// 	uhf_read_handler(data);
+	// }
 }
 
 
@@ -240,9 +250,11 @@ void rfid_timeout_handler(uint8_t id, uint32_t fullcode) {
 
 	now = get_current_time();
 
-	if (en_rabbitmq)
-	send_message(format_message("rfid", rfid_src, data),
-				 EXCHANGE_NAME, routing_key);
+	if (en_rabbitmq) {
+		char* formatted_message = format_message("rfid", rfid_src, data);
+		send_message(formatted_message, EXCHANGE_NAME, routing_key);
+		if (formatted_message != NULL) free(formatted_message);
+	}
 }
 
 /**
@@ -250,19 +262,19 @@ void rfid_timeout_handler(uint8_t id, uint32_t fullcode) {
  *  @param read_data data that the reader return
  */
 void uhf_read_handler(char* read_data) {
-	if (read_data[0] == 'E' && read_data[1] == 'R' &&
-		read_data[2] == 'R' && read_data[3] == '\0') {
-		return;
-	}
 	char* uhf_src = "rfid.3";
 	char routing_key[20];
 	snprintf(routing_key, 20, "%s.%s", ROUTING_KEY_PREFIX, uhf_src);
 	char data[150];
 	snprintf(data, 150, "tag_id:0x%s", read_data);
 
-	if (en_rabbitmq)
-	send_message(format_message("rfid", uhf_src, data),
-				 EXCHANGE_NAME, routing_key);
+	if (read_data != NULL) free(read_data);
+
+	if (en_rabbitmq) {
+		char* formatted_message = format_message("rfid", uhf_src, data);
+		send_message(formatted_message, EXCHANGE_NAME, routing_key);
+		if (formatted_message != NULL) free(formatted_message);
+	}
 }
 
 
@@ -270,7 +282,8 @@ int main() {
 
 	if (en_rabbitmq) {
 		printf("Init RabbitMQ...\n");
-		rabbitmq_init(HOST, USERNAME, PASSWORD, PORT);
+		rabbitmq_set_connection_params(HOST, USERNAME, PASSWORD, PORT);
+		rabbitmq_init();
 	}
 
 	if (en_pir) {

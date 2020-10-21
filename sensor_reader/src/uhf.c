@@ -252,7 +252,7 @@ char* uhf_read_tag()
     uint8_t len = (uint8_t)sizeof(cmd)/sizeof(cmd[0]);
     char* formatted_cmd = __format_command(cmd, len);
     serialPrintf(fd, formatted_cmd);
-    if (formatted_cmd) free(formatted_cmd);
+    if (formatted_cmd != NULL) free(formatted_cmd);
     
     usleep(10000); // us
 
@@ -278,9 +278,13 @@ char* uhf_read_tag()
                 // printf("EPC: %s\n", __get_hex_string(res, 9, 7 + data_len - read_len - 2));
                 // printf("CRC: %s\n", __get_hex_string(res, 7 + data_len - read_len - 2, 7 + data_len - read_len));
                 // printf("Full package: %s\n", __get_hex_string(res, 0, res_len));
-                printf("UHF Read data: 0x%s\n", __get_hex_string(res, 7 + data_len - read_len, 7 + data_len));
+
+                char* hex_str = __get_hex_string(res, 7 + data_len - read_len, 7 + data_len);
+                printf("UHF Read data: 0x%s\n", hex_str);
                 fflush(stdout);
-                return __get_hex_string(res, 7 + data_len - read_len, 7 + data_len);
+
+                if (res != NULL) free(res);
+                return hex_str;
             }
         }
     }
@@ -294,7 +298,7 @@ char* uhf_realtime_inventory()
     uint8_t len = (uint8_t)sizeof(cmd)/sizeof(cmd[0]);
     char* formatted_cmd = __format_command(cmd, len);
     serialPrintf(fd, formatted_cmd);
-    if (formatted_cmd) free(formatted_cmd);
+    if (formatted_cmd != NULL) free(formatted_cmd);
 
     usleep(1000);
 
@@ -316,9 +320,12 @@ char* uhf_realtime_inventory()
                 // printf("\nPC: %s", __get_hex_string(res, 5, 7));
                 // printf("\nRSSI: %s", __get_hex_string(res, res_len - 2, res_len - 1));
                 // printf("\nEPC: %s", __get_hex_string(res, 7, res_len - 2));
-                printf("UHF EPC: 0x%s\n", __get_hex_string(res, 7, res_len-2));
+
+                char* hex_str = __get_hex_string(res, 7, res_len - 2);
+                printf("UHF EPC: 0x%s\n", hex_str);
                 fflush(stdout);
-                return __get_hex_string(res, 7, res_len - 2);
+                if (res != NULL) free(res);
+                return hex_str;
             }
         }
     }

@@ -22,6 +22,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <wiringPi.h>
 
 #include <rabbitmq.h>
 #include <pir.h>
@@ -29,11 +30,11 @@
 #include <uhf.h>
 
 
-#define en_rabbitmq 1
+#define en_rabbitmq 0
 #define en_pir		1
-#define en_rfid	 	1
-#define en_uhf		1
-#define en_camera	1
+#define en_rfid	 	0
+#define en_uhf		0
+#define en_camera	0
 
 
 // ------------------------- Constants -----------------------------------
@@ -46,10 +47,13 @@
 #define PORT 				5672
 
 // --- PIR parameters
-#define PIR_CNT	   2
-#define PIR_DEBOUNCE 200000 //us
-#define PIR_1_PIN  4 //wiringpi pin
-#define PIR_2_PIN  5 //wiringpi pin
+#define PIR_DEBOUNCE 	   200000 //us
+#define PIR_STATE_DEBOUNCE 100 //us
+#define PIR_CNT	    	   3
+#define PIR_1_PIN	       4  //wiringpi pin
+#define PIR_2_PIN	       5  //wiringpi pin
+#define PIR_3_PIN	       10  //wiringpi pin
+#define PIR_STATE_ID	   3
 
 // --- RFID parameters
 #define MAIN_RFID_1 0 //index for rfid module 1
@@ -73,6 +77,7 @@ pthread_t camera_thread_id;
 uint8_t pir_flags[PIR_CNT+1]; //2 pir sensor but we want the index to start at 1
 uint8_t pir_debounce_flag[PIR_CNT+1]; //2 pir sensor but we want the index to start at 1
 pthread_t pir_thread_id;
+int pir_state_debounce = 0;
 // --- UHF
 pthread_t uhf_thread_id;
 // --- Keep track of time
@@ -110,7 +115,7 @@ void* img_erase_thread(void* arg)
  *  @return void*
  */
 void* pir_send_thread(void* arg) {
-	uint8_t id = *(uint8_t*)arg;
+	uint8_t id = (arg != NULL ? *(uint8_t*)arg : PIR_STATE_ID);
 	pir_debounce_flag[id] = 0;
 
 	if (en_rabbitmq) {
@@ -126,7 +131,7 @@ void* pir_send_thread(void* arg) {
 	}
 
 	// Remove these lines if threads are used
-	usleep(PIR_DEBOUNCE);
+	if (id != PIR_STATE_ID) usleep(PIR_DEBOUNCE);
 	pir_debounce_flag[id] = 1;
 }
 
@@ -226,6 +231,18 @@ void pir_isr_handler(uint8_t id) {
 	}
 }
 
+void* pir_state_reader(void* arg) {
+	while (1) {
+        if (!digitalRead(PIR_3_PIN)) {
+            printf("PIR: %d\n", PIR_STATE_ID);
+            fflush(stdout);
+
+			pthread_create(&pir_thread_id, NULL, pir_send_thread, NULL);
+        }
+        usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
+    }
+}
+
 /**
  *  @brief timeout handler for wiegand26 protocol
  *  @param id id of the rfid being captured
@@ -278,7 +295,7 @@ void uhf_read_handler(char* read_data) {
 }
 
 
-int main() {
+int main(int argc, char** argv) {
 
 	if (en_rabbitmq) {
 		printf("Init RabbitMQ...\n");
@@ -287,10 +304,12 @@ int main() {
 	}
 
 	if (en_pir) {
+		if (argc > 0) pir_state_debounce = atoi(argv[1]);
 		printf("Init PIRs...\n");
 		for (uint8_t i=0;i<=PIR_CNT;i++) *(pir_flags+i)= !(*(pir_debounce_flag+i) = 1); //set all pir_flags to 0 and all pir_debounce_flag to 1 
 		pir_set_ext_isr(pir_isr_handler);
-		pir_init(PIR_1_PIN, PIR_2_PIN);
+		pir_set_ext_state_reader(pir_state_reader);
+		pir_init(PIR_1_PIN, PIR_2_PIN, PIR_3_PIN);
 	}
 
 	if (en_rfid) {

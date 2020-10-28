@@ -13,6 +13,6 @@ RestartSec=1000ms
 User=pi
 
 [Install]
-# WantedBy=sysinit.target multi-user.target
+WantedBy=sysinit.target multi-user.target
 
 # reference: https://www.raspberrypi.org/forums/viewtopic.php?t=221507

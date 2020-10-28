@@ -30,7 +30,7 @@
 #include <uhf.h>
 
 
-#define en_rabbitmq 0
+#define en_rabbitmq 1
 #define en_pir		1
 #define en_rfid	 	0
 #define en_uhf		0
@@ -237,7 +237,7 @@ void* pir_state_reader(void* arg) {
             printf("PIR: %d\n", PIR_STATE_ID);
             fflush(stdout);
 
-			pthread_create(&pir_thread_id, NULL, pir_send_thread, NULL);
+			pir_send_thread(NULL);
         }
         usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
     }
@@ -304,7 +304,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (en_pir) {
-		if (argc > 0) pir_state_debounce = atoi(argv[1]);
+		if (argc > 1) pir_state_debounce = atoi(argv[1]);
 		printf("Init PIRs...\n");
 		for (uint8_t i=0;i<=PIR_CNT;i++) *(pir_flags+i)= !(*(pir_debounce_flag+i) = 1); //set all pir_flags to 0 and all pir_debounce_flag to 1 
 		pir_set_ext_isr(pir_isr_handler);

@@ -192,8 +192,6 @@ uint64_t get_current_time(void)
 char* format_message(char* sensor, char* src, char* data)
 {
 	char* message = (char*)malloc(300);
-	struct timeb ts;
-	ftime(&ts);
 
 	snprintf(message, 300,
 		"{"
@@ -237,6 +235,7 @@ void* pir_state_reader(void* arg) {
             printf("PIR: %d\n", PIR_STATE_ID);
             fflush(stdout);
 
+			now = get_current_time();
 			pir_send_thread(NULL);
         }
         usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);

@@ -32,9 +32,9 @@
 
 #define en_rabbitmq 1
 #define en_pir		1
-#define en_rfid	 	0
-#define en_uhf		0
-#define en_camera	0
+#define en_rfid	 	1
+#define en_uhf		1
+#define en_camera	1
 
 
 // ------------------------- Constants -----------------------------------
@@ -48,12 +48,13 @@
 
 // --- PIR parameters
 #define PIR_DEBOUNCE 	   200000 //us
-#define PIR_STATE_DEBOUNCE 100 //us
+#define PIR_STATE_DEBOUNCE 1000 //us
 #define PIR_CNT	    	   3
 #define PIR_1_PIN	       4  //wiringpi pin
 #define PIR_2_PIN	       5  //wiringpi pin
 #define PIR_3_PIN	       10  //wiringpi pin
 #define PIR_STATE_ID	   3
+#define OTHER_SENSOR_ID    0
 
 // --- RFID parameters
 #define MAIN_RFID_1 0 //index for rfid module 1
@@ -81,7 +82,7 @@ int pir_state_debounce = 0;
 // --- UHF
 pthread_t uhf_thread_id;
 // --- Keep track of time
-uint64_t now;
+uint64_t now[PIR_CNT+1];
 
 // ------ Private function prototypes -------------------------
 void* img_erase_thread(void*);
@@ -89,7 +90,7 @@ void* pir_send_thread(void*);
 void* uhf_thread(void*);
 void camera_init(void);
 uint64_t get_current_time(void);
-char* format_message(char*, char*, char*);
+char* format_message(char*, char*, char*, uint8_t);
 void pir_isr_handler(uint8_t);
 void rfid_timeout_handler(uint8_t, uint32_t);
 void uhf_read_handler(char*);
@@ -116,7 +117,6 @@ void* img_erase_thread(void* arg)
  */
 void* pir_send_thread(void* arg) {
 	uint8_t id = (arg != NULL ? *(uint8_t*)arg : PIR_STATE_ID);
-	pir_debounce_flag[id] = 0;
 
 	if (en_rabbitmq) {
 		char pir_src[10];
@@ -126,12 +126,15 @@ void* pir_send_thread(void* arg) {
 		char data[20];
 		snprintf(data, 10, "pir_id:%d", id);
 
-		send_message(format_message("pir", pir_src, data),
+		send_message(format_message("pir", pir_src, data, id),
 				 	 EXCHANGE_NAME, routing_key);
 	}
 
 	// Remove these lines if threads are used
-	if (id != PIR_STATE_ID) usleep(PIR_DEBOUNCE);
+	id != PIR_STATE_ID ?
+		usleep(PIR_DEBOUNCE) :
+		usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
+	// if (id != PIR_STATE_ID) usleep(PIR_DEBOUNCE);
 	pir_debounce_flag[id] = 1;
 }
 
@@ -189,7 +192,7 @@ uint64_t get_current_time(void)
  *  @param data data to send
  *  @return formatted string
  */
-char* format_message(char* sensor, char* src, char* data)
+char* format_message(char* sensor, char* src, char* data, uint8_t sensor_id)
 {
 	char* message = (char*)malloc(300);
 
@@ -200,7 +203,7 @@ char* format_message(char* sensor, char* src, char* data)
 			"\"source\":\"%s\","
 			"\"data\":\"%s\""
 		"}",
-		now, sensor, src, data
+		now[sensor_id], sensor, src, data
 	);
 
 	return message;
@@ -211,18 +214,20 @@ char* format_message(char* sensor, char* src, char* data)
  *  @param id id of the pir to be sent
  */
 void pir_isr_handler(uint8_t id) {
-	printf("PIR: %d\n", id);
-
 	if (pir_debounce_flag[id]) {
+		pir_debounce_flag[id] = 0;
+
+		printf("PIR: %d\n", id);
 		fflush(stdout);
-		now = get_current_time();
+		now[id] = get_current_time();
+
 		// --- capture camera
 		char cmd[100];
-		snprintf(cmd, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 1, now, IMAGE_LIMIT);
+		snprintf(cmd, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 1, now[id], IMAGE_LIMIT);
 		system(cmd);
 
 		char cmd2[100];
-		snprintf(cmd2, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 2, now, IMAGE_LIMIT);
+		snprintf(cmd2, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 2, now[id], IMAGE_LIMIT);
 		system(cmd2);
 
 		pthread_create(&pir_thread_id, NULL, pir_send_thread, &id);
@@ -231,14 +236,16 @@ void pir_isr_handler(uint8_t id) {
 
 void* pir_state_reader(void* arg) {
 	while (1) {
-        if (!digitalRead(PIR_3_PIN)) {
+        if (pir_debounce_flag[PIR_STATE_ID] && !digitalRead(PIR_3_PIN)) {
+			pir_debounce_flag[PIR_STATE_ID] = 0;
             printf("PIR: %d\n", PIR_STATE_ID);
             fflush(stdout);
 
-			now = get_current_time();
+			now[PIR_STATE_ID] = get_current_time();
 			pir_send_thread(NULL);
         }
-        usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
+        // usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
+		usleep(100);
     }
 }
 
@@ -264,10 +271,9 @@ void rfid_timeout_handler(uint8_t id, uint32_t fullcode) {
 	char data[20];
 	snprintf(data, 20, "tag_id:0x%06X", fullcode);
 
-	now = get_current_time();
-
 	if (en_rabbitmq) {
-		char* formatted_message = format_message("rfid", rfid_src, data);
+		now[OTHER_SENSOR_ID] = get_current_time();
+		char* formatted_message = format_message("rfid", rfid_src, data, OTHER_SENSOR_ID);
 		send_message(formatted_message, EXCHANGE_NAME, routing_key);
 		if (formatted_message != NULL) free(formatted_message);
 	}
@@ -287,7 +293,8 @@ void uhf_read_handler(char* read_data) {
 	if (read_data != NULL) free(read_data);
 
 	if (en_rabbitmq) {
-		char* formatted_message = format_message("rfid", uhf_src, data);
+		now[OTHER_SENSOR_ID] = get_current_time();
+		char* formatted_message = format_message("rfid", uhf_src, data, OTHER_SENSOR_ID);
 		send_message(formatted_message, EXCHANGE_NAME, routing_key);
 		if (formatted_message != NULL) free(formatted_message);
 	}
@@ -308,7 +315,7 @@ int main(int argc, char** argv) {
 		for (uint8_t i=0;i<=PIR_CNT;i++) *(pir_flags+i)= !(*(pir_debounce_flag+i) = 1); //set all pir_flags to 0 and all pir_debounce_flag to 1 
 		pir_set_ext_isr(pir_isr_handler);
 		pir_set_ext_state_reader(pir_state_reader);
-		pir_init(PIR_1_PIN, PIR_2_PIN, PIR_3_PIN);
+		pir_init(PIR_1_PIN, PIR_2_PIN, PIR_NO_PIN);
 	}
 
 	if (en_rfid) {

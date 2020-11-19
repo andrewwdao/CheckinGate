@@ -44,5 +44,6 @@ uint8_t uhf_init(const char*,uint32_t,uint8_t);
 uint8_t uhf_set_param(uint8_t,uint8_t,uint8_t);
 void uhf_show_usage();
 char* uhf_read_tag();
-char* uhf_realtime_inventory();
+void uhf_realtime_inventory();
+char* uhf_read_rt_inventory();
 // ------ Public variable -------------------------------------

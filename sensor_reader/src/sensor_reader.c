@@ -146,7 +146,7 @@ void* pir_send_thread(void* arg) {
  */
 void* uhf_thread(void* arg) {
 	while(1) {
-		char* data = uhf_realtime_inventory();
+		char* data = uhf_read_rt_inventory();
 		
 		if (!(data[0] == 'E' && data[1] == 'R' &&
 			data[2] == 'R' && data[3] == '\0')) {
@@ -214,6 +214,8 @@ char* format_message(char* sensor, char* src, char* data, uint8_t sensor_id)
  *  @param id id of the pir to be sent
  */
 void pir_isr_handler(uint8_t id) {
+	uhf_realtime_inventory();
+
 	if (pir_debounce_flag[id]) {
 		pir_debounce_flag[id] = 0;
 
@@ -237,6 +239,8 @@ void pir_isr_handler(uint8_t id) {
 void* pir_state_reader(void* arg) {
 	while (1) {
         if (pir_debounce_flag[PIR_STATE_ID] && !digitalRead(PIR_3_PIN)) {
+			uhf_realtime_inventory();
+			
 			pir_debounce_flag[PIR_STATE_ID] = 0;
             printf("PIR: %d\n", PIR_STATE_ID);
             fflush(stdout);

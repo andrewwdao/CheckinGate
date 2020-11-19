@@ -292,16 +292,8 @@ char* uhf_read_tag()
     return "ERR";
 }
 
-char* uhf_realtime_inventory()
+char* uhf_read_rt_inventory()
 {
-    char cmd[] = {RT_INVENTORY_CMD, 255};
-    uint8_t len = (uint8_t)sizeof(cmd)/sizeof(cmd[0]);
-    char* formatted_cmd = __format_command(cmd, len);
-    serialPrintf(fd, formatted_cmd);
-    if (formatted_cmd != NULL) free(formatted_cmd);
-
-    usleep(1000);
-
     uint8_t res_len;
     char* res = __read_response_packet(&res_len);
 
@@ -331,6 +323,15 @@ char* uhf_realtime_inventory()
     }
     fflush(stdout);
     return "ERR";
+}
+
+void uhf_realtime_inventory()
+{
+    char cmd[] = {RT_INVENTORY_CMD, 10};
+    uint8_t len = (uint8_t)sizeof(cmd)/sizeof(cmd[0]);
+    char* formatted_cmd = __format_command(cmd, len);
+    serialPrintf(fd, formatted_cmd);
+    if (formatted_cmd != NULL) free(formatted_cmd);
 }
 
 uint8_t uhf_set_param(uint8_t _membank, uint8_t _word_address, uint8_t _word_cnt)
@@ -381,7 +382,7 @@ uint8_t uhf_init(const char* port, uint32_t baudrate, uint8_t oepin)
     }
 
     serialFlush(fd);
-    __reset_reader();
+    //__reset_reader();
 
     return 0;
 }//end uhf_init

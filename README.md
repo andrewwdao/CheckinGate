@@ -18,7 +18,29 @@ make
 
 ***
 
-## Optional: Set up NTP server
+## Setting up RabbitMQ
+
+### Install rabbitmq-server
+
+```sh
+sudo apt-get install rabbitmq-server
+```
+
+### Enabling the service
+
+```sh
+sudo systemctl enable rabbitmq-server
+```
+
+### Running
+
+```sh
+sudo systemctl start rabbitmq-server
+```
+
+***
+
+## Optional: Setting up NTP server
 
 ### Install ntp
 
@@ -34,7 +56,7 @@ sudo apt-get install ntp
 
 ***
 
-## Optional: Set up FTP server
+## Optional: Setting up FTP server
 
 ### Install `vsftpd`
   

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -eu -o pipefail # fail on error , debug all lines
+
+if [ 'root' != $( whoami ) ] ; then
+  echo "Please run as root! ( sudo ${0} )"
+  exit 1;
+fi
+echo "This setup will install the ntp server..."
+
+apt-get install ntp
+if [ 0 -eq $( grep -c 'restrict 192.168.1.0 mask 255.255.255.0' /etc/ntp.conf ) ]
+then
+	echo "restrict 192.168.1.0 mask 255.255.255.0" | tee -a /etc/ntp.conf
+fi
+if [ 0 -eq $( grep -c 'broadcast 192.168.1.255' /etc/ntp.conf ) ] ; then
+	echo "broadcast 192.168.1.255" | tee -a /etc/ntp.conf
+fi
+if [ 0 -eq $( grep -c 'broadcast 224.0.1.1' /etc/ntp.conf ) ] ; then
+	echo "broadcast 224.0.1.1" | tee -a /etc/ntp.conf
+fi

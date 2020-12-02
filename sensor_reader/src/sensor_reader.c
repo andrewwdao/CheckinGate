@@ -30,11 +30,12 @@
 #include <uhf.h>
 
 
-#define en_rabbitmq 1
-#define en_pir		1
-#define en_rfid	 	1
-#define en_uhf		1
-#define en_camera	1
+#define en_rabbitmq   0
+#define en_pir		  0
+#define en_rfid	 	  0
+#define en_uhf_w26    1
+#define en_uhf_rs23   0
+#define en_camera	  0
 
 
 // ------------------------- Constants -----------------------------------
@@ -51,8 +52,8 @@
 #define PIR_STATE_DEBOUNCE 1000 //us
 #define PIR_CNT	    	   3
 #define PIR_1_PIN	       4  //wiringpi pin
-#define PIR_2_PIN	       5  //wiringpi pin
-#define PIR_3_PIN	       10  //wiringpi pin
+#define PIR_2_PIN	       1  //wiringpi pin
+#define PIR_3_PIN	       3  //wiringpi pin
 #define PIR_STATE_ID	   3
 #define OTHER_SENSOR_ID    0
 
@@ -68,6 +69,9 @@
 // --- UHF parameters
 #define UHF_PORT 	  "/dev/serial0"
 #define UHF_BAUDRATE  115200
+#define MAIN_UHF   2  //index for rfid module 2
+#define UHF_D0_PIN 10 //wiringpi pin
+#define UHF_D1_PIN 11 //wiringpi pin
 
 // --- Camera parameter
 #define IMAGE_LIMIT	  10000
@@ -214,7 +218,8 @@ char* format_message(char* sensor, char* src, char* data, uint8_t sensor_id)
  *  @param id id of the pir to be sent
  */
 void pir_isr_handler(uint8_t id) {
-	uhf_realtime_inventory();
+	if (en_uhf_rs23)
+		uhf_realtime_inventory();
 
 	if (pir_debounce_flag[id]) {
 		pir_debounce_flag[id] = 0;
@@ -224,13 +229,15 @@ void pir_isr_handler(uint8_t id) {
 		now[id] = get_current_time();
 
 		// --- capture camera
-		char cmd[100];
-		snprintf(cmd, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 1, now[id], IMAGE_LIMIT);
-		system(cmd);
+		if (en_camera) {
+			char cmd[100];
+			snprintf(cmd, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 1, now[id], IMAGE_LIMIT);
+			system(cmd);
 
-		char cmd2[100];
-		snprintf(cmd2, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 2, now[id], IMAGE_LIMIT);
-		system(cmd2);
+			char cmd2[100];
+			snprintf(cmd2, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 2, now[id], IMAGE_LIMIT);
+			system(cmd2);
+		}
 
 		pthread_create(&pir_thread_id, NULL, pir_send_thread, &id);
 	}
@@ -239,7 +246,8 @@ void pir_isr_handler(uint8_t id) {
 void* pir_state_reader(void* arg) {
 	while (1) {
         if (pir_debounce_flag[PIR_STATE_ID] && !digitalRead(PIR_3_PIN)) {
-			uhf_realtime_inventory();
+			if (en_uhf_rs23)
+				uhf_realtime_inventory();
 			
 			pir_debounce_flag[PIR_STATE_ID] = 0;
             printf("PIR: %d\n", PIR_STATE_ID);
@@ -319,7 +327,7 @@ int main(int argc, char** argv) {
 		for (uint8_t i=0;i<=PIR_CNT;i++) *(pir_flags+i)= !(*(pir_debounce_flag+i) = 1); //set all pir_flags to 0 and all pir_debounce_flag to 1 
 		pir_set_ext_isr(pir_isr_handler);
 		pir_set_ext_state_reader(pir_state_reader);
-		pir_init(PIR_1_PIN, PIR_2_PIN, PIR_NO_PIN);
+		pir_init(PIR_1_PIN, PIR_2_PIN, PIR_3_PIN);
 	}
 
 	if (en_rfid) {
@@ -327,15 +335,23 @@ int main(int argc, char** argv) {
 		// --- RFID 1
 		void rfid_1_d0_isr RFID_CREATE_ISR_HANDLER(MAIN_RFID_1, RFID_D0_BIT)
 		void rfid_1_d1_isr RFID_CREATE_ISR_HANDLER(MAIN_RFID_1, RFID_D1_BIT)
-		rfid_init(MAIN_RFID_1, RFID_1_D0_PIN, RFID_1_D1_PIN, OE_PIN, rfid_1_d0_isr, rfid_1_d1_isr, rfid_timeout_handler);
+		rfid_init(MAIN_RFID_1, RFID_1_D0_PIN, RFID_1_D1_PIN, RFID_NO_OE_PIN, rfid_1_d0_isr, rfid_1_d1_isr, rfid_timeout_handler);
 		// --- RFID 2
 		void rfid_2_d0_isr RFID_CREATE_ISR_HANDLER(MAIN_RFID_2, RFID_D0_BIT)
 		void rfid_2_d1_isr RFID_CREATE_ISR_HANDLER(MAIN_RFID_2, RFID_D1_BIT)
 		rfid_init(MAIN_RFID_2, RFID_2_D0_PIN, RFID_2_D1_PIN, RFID_NO_OE_PIN, rfid_2_d0_isr, rfid_2_d1_isr, rfid_timeout_handler);
 	}
 
-	if (en_uhf) {
-		printf("Init UHF RFID...\n");
+	// --- UHF
+	if (en_uhf_w26) {
+		printf("Init UHF RFID (Wiegand 26)...\n");
+		void uhf_d0_isr RFID_CREATE_ISR_HANDLER(MAIN_UHF, RFID_D0_BIT)
+		void uhf_d1_isr RFID_CREATE_ISR_HANDLER(MAIN_UHF, RFID_D1_BIT)
+		rfid_init(MAIN_UHF, UHF_D0_PIN, UHF_D1_PIN, RFID_NO_OE_PIN, uhf_d0_isr, uhf_d1_isr, rfid_timeout_handler);
+	}
+
+	if (en_uhf_rs23) {
+		printf("Init UHF RFID (RS232)...\n");
 		uhf_set_param(EPC_MEMBANK, 0x01, 7);
 		uhf_init(UHF_PORT, UHF_BAUDRATE, OE_PIN);
 		pthread_create(&uhf_thread_id, NULL, uhf_thread, NULL);

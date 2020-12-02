@@ -39,7 +39,7 @@ uint64_t get_current_time(void)
  *  @param data data to send
  *  @return formatted string
  */
-char* format_message(uint64_t now, char* sensor, char* src, char* data, uint8_t sensor_id)
+char* format_message(uint64_t timestamp, char* sensor, char* src, char* data, uint8_t sensor_id)
 {
 	char* message = (char*)malloc(300);
 
@@ -50,9 +50,9 @@ char* format_message(uint64_t now, char* sensor, char* src, char* data, uint8_t 
 			"\"source\":\"%s\","
 			"\"data\":\"%s\""
 		"}",
-		now, sensor, src, data
+		timestamp, sensor, src, data
 	);
-
+	//printf("%s\n", message);
 	return message;
 }
 

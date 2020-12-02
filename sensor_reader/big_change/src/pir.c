@@ -9,7 +9,6 @@
 #include <uhf.h>
 #include <sensor_reader.h>
 
-#define PIR_STATE_DELAY 1000
 
 #define USE_STATE_PIR   1
 
@@ -35,13 +34,14 @@ void* pir_send_thread(void* arg) {
     now[id] = get_current_time();
 
     #if en_camera
+    if (id != PIR_STATE_ID) {
         char cmd[100];
         snprintf(cmd, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 1, now[id], IMAGE_LIMIT);
         system(cmd);
 
-        char cmd2[100];
-        snprintf(cmd2, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 2, now[id], IMAGE_LIMIT);
-        system(cmd2);
+        // snprintf(cmd, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 2, now[id], IMAGE_LIMIT);
+        // system(cmd);
+    }
     #endif
 
 	#if en_rabbitmq
@@ -57,10 +57,10 @@ void* pir_send_thread(void* arg) {
 	#endif
 
 	// Remove these lines if threads are used
-	id != PIR_STATE_ID ?
-		usleep(PIR_DEBOUNCE) :
-		usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
-	// if (id != PIR_STATE_ID) usleep(PIR_DEBOUNCE);
+	// id != PIR_STATE_ID ?
+	// 	usleep(PIR_DEBOUNCE) :
+	// 	usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
+	if (id != PIR_STATE_ID) usleep(PIR_DEBOUNCE);
 	pir_debounce_flag[id] = 1;
 }
 
@@ -106,19 +106,8 @@ void* pir_3_reader(void* arg) {
 				pir_send_thread(NULL);
 			#endif
         }
-        // usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
-		usleep(100);
-    }
-}
-
-void* pir_in_state_reader(void* arg) {
-    while (1) {
-        // printf("PIN: %d VAL: %d\n", pir_state_pin, digitalRead(pir_state_pin));
-        if (!digitalRead(pir_state_pin)) {
-            printf("3\n");
-            fflush(stdout);
-        }
-        usleep(PIR_STATE_DELAY);
+        usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
+		// usleep(200);
     }
 }
 

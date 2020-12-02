@@ -14,7 +14,7 @@
 #define max(a,b) (a>b ? a : b)
 
 #define WIEGAND_VALID_BIT_CNT   26
-#define WIEGAND_MAX_TIMEOUT     150000
+#define WIEGAND_MAX_TIMEOUT     100000
 #define WIEGAND_BIT_TIMEOUT     100
 #define DEAULT_RFID_ID          0
 #define USE_RFID                1
@@ -67,16 +67,18 @@ void* timeout_handler(void *id_ptr) {
             if (formatted_message != NULL) free(formatted_message);
         #endif
 	} else {
-        printf("RFID %d: CHECKSUM FAILED\n", id);
+        printf("RFID %d: CHECKSUM FAILED (%X, %d bits)\n", id, wds[id].tag_id, wds[id].bit_cnt);
     }
 
     waiting_next_bit[id] = 0;
+
+    reset_sequence(id);
 }
 
 void handle_isr(uint8_t id, uint8_t bit) {
     if (!waiting_next_bit[id]) {
-        pthread_create(&thread_id[id], NULL, timeout_handler, (id == rfid_1_id ? &rfid_1_id : (id == rfid_2_id ? &rfid_2_id : &uhf_id))); // create a timeout handler thread for the wiegand data line
         waiting_next_bit[id] = 1;
+        pthread_create(&thread_id[id], NULL, timeout_handler, (id == rfid_1_id ? &rfid_1_id : (id == rfid_2_id ? &rfid_2_id : &uhf_id))); // create a timeout handler thread for the wiegand data line
     }
     add_bit_w26(id, bit);
 }
@@ -124,6 +126,7 @@ uint8_t check_parity(uint8_t id) {
 }
 
 void add_bit_w26(uint8_t id, uint8_t bit) {
+    // printf("%d ", wds[id].bit_cnt);
     struct timeb ts;
 	ftime(&ts);
     unsigned long long now = (unsigned long long int)ts.time*1000ll + ts.millitm;

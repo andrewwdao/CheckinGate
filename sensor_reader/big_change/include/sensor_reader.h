@@ -17,7 +17,7 @@
 
 // --- PIR parameters
 #define PIR_DEBOUNCE 	   200000 //us
-#define PIR_STATE_DEBOUNCE 1000 //us
+#define PIR_STATE_DEBOUNCE 20000 //us
 #define PIR_CNT	    	   3
 #define PIR_1_PIN	       4  //wiringpi pin
 #define PIR_2_PIN	       1  //wiringpi pin

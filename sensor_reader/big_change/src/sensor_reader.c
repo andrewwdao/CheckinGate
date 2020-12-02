@@ -124,6 +124,7 @@ int main(int argc, char** argv) {
 	#endif
 
 	#if en_pir
+		printf("Init PIRs...\n");
 		pir_init(PIR_1_PIN, PIR_2_PIN, PIR_3_PIN);
 	#endif
 

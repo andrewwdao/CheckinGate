@@ -1,0 +1,14 @@
+[Unit]
+Description=usb switch-mode service
+DefaultDependencies=true
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStartPre=sleep 7
+ExecStart=usb_modeswitch -W -I -v 12d1 -p 1446 -M 55534243123456780000000000000011062000000100010100000000000000
+
+[Install]
+WantedBy=multi-user.target
+
+# reference: https://www.raspberrypi.org/forums/viewtopic.php?t=221507

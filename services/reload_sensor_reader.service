@@ -1,0 +1,15 @@
+Description=RESTART_SENSOR_READER_SERVICE
+
+Wants=network.target
+After=syslog.target network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=echo "RELOAD SENSOR READER SERVICE"
+ExecStart=systemctl restart sensor_reader.service
+Restart=always
+RestartSec=30
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

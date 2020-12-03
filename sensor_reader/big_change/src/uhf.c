@@ -184,8 +184,10 @@ char* __read_response_packet(uint8_t* packet_len)
 {
     if (serialDataAvail(fd)) {
         char header = serialGetchar(fd);
-        if (header != HEADER)
+        if (header != HEADER) {
             printf("\nWarning (__read_response_packet): %02X is not packet header", header);
+            return NULL;
+        }
 
         *packet_len = serialGetchar(fd);
 

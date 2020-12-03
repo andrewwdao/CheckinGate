@@ -110,7 +110,7 @@ class UHFReader():
     def format_command(self, command):
         # Message length count from third byte, exculuding header and len byte (address -> check)
         message_length = len(command) + 2
-        command = [HEADER, len(command) + 2, READER_ADDRESS] + command
+        command = [HEADER, len(command) + 2, PUBLIC_ADDRESS] + command
         command.append(self.get_checksum(command))
         print(self.get_hex_string(command))
         return bytearray(command)
@@ -131,7 +131,7 @@ class UHFReader():
         return int_arr
 
     
-    def open_connection(self, port=DEFAULT_SERIAL_PORT, baudrate=DEFAULT_BAUDRATE, timeout=1):
+    def open_connection(self, port=DEFAULT_SERIAL_PORT, baudrate=DEFAULT_BAUDRATE, timeout=20):
         self.ser = serial.Serial(port=port, baudrate=baudrate, timeout=timeout)
         self.ser.close()
         self.ser.open()
@@ -160,11 +160,19 @@ class UHFReader():
 
         self.ser.write(self.format_command([READ_CMD, membank, word_address, word_cnt]))
 
-        header = self.read_output()[0]
+        '''
+        output = self.read_output()
+        if len(output) == 0:
+            return
+        header = output[0]
         if header != 0xA0:
             print("Wrong response header: " + format(header, '#04x'))
+            return
 
-        message_length = self.read_output()[0]
+        output = self.read_output()
+        if len(output) == 0:
+            return
+        message_length = output[0]
         response = self.read_output(message_length)
 
         if message_length == 4:
@@ -187,6 +195,7 @@ class UHFReader():
             print("Read data: " + self.get_hex_string(read_data))
 
             return self.get_hex_string(read_data)
+        '''
 
     
     def write_tag(self, data, membank=TID_MEMBANK,
@@ -255,6 +264,7 @@ class UHFReader():
         header = header[0]
         if header != 0xA0:
             print("Wrong response header: " + format(header, '#04x'))
+            return
         
         message_length = self.read_output()[0]
         response = self.read_output(message_length)
@@ -289,23 +299,45 @@ uhf = UHFReader()
 uhf.open_connection()
 # uhf.setmode_standard()
 time.sleep(1)
-# uhf.reset_reader()
 
-uhf.set_reader_mode(WIEGAND26_MODE)
+while False:
+    #print("Reset")
+    uhf.reset_reader()
+    time.sleep(1)
 
-# uhf.set_beeper_mode(BUZZER_TAG)
+uhf.reset_reader()
+uhf.set_reader_mode(STANDARD_MODE)
+#uhf.set_reader_mode(WIEGAND26_MODE)
+
+uhf.set_beeper_mode(BUZZER_QUIET)
+#uhf.set_beeper_mode(BUZZER_TAG)
 # uhf.write_tag(data=[0x00, 0x00, 0x00, 0x00],
 #               membank=USER_MEMBANK,
 #               word_address=0x01,
 #               word_cnt=2)
 # uhf.realtime_inventory_start()
-
-uhf.read_output()
+#uhf.read_output()
 # uhf.read_tag(membank=TID_MEMBANK, word_address=0x01, word_cnt=11)
+uhf.read_tag()
 
-while False:
-    uhf.realtime_inventory_start()
-    uhf.read_realtime_inventory()
+while True:
+    try:
+        uhf.realtime_inventory_start()
+        #uhf.read_realtime_inventory()
+        #tag = uhf.read_tag(membank=TID_MEMBANK, word_address=0x01, word_cnt=11)
+        output = uhf.read_output()
+        #print(output)
+        #print(tag)
+        for out in output:
+            print(hex(out))
+    except KeyboardInterrupt:
+        break
+    except:
+        pass
+
+    #uhf.realtime_inventory_start()
+    #uhf.read_realtime_inventory()
+
     # print("\nPress enter to read tag...")
     # input()
 

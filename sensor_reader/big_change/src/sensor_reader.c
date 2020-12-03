@@ -67,6 +67,8 @@ void* img_erase_thread(void* arg)
 void* uhf_thread(void* arg) {
 	while(1) {
 		char* data = uhf_read_rt_inventory();
+
+		if (data == NULL) continue;
 		
 		if (!(data[0] == 'E' && data[1] == 'R' &&
 			data[2] == 'R' && data[3] == '\0')) {

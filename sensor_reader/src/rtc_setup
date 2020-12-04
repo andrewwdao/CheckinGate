@@ -73,10 +73,16 @@ if [ ! -f $FLAGDIR/rtc_setup_flag ]; then
 	update-rc.d rtc_setup defaults
 	reboot -h now
 else
+	sudo ifconfig eth0 down
+	sleep 2
+
 	# automatically get and set time from the internet (workaround for proxy setting)
 	date -s "$(wget -qSO- --timeout=10 --max-redirect=0 google.vn 2>&1 | grep Date: | cut -d' ' -f5-8)Z"
 	hwclock --verbose -r
 	hwclock -w
+	sleep 2
+
+	sudo ifconfig eth0 up
 
 	rm -f $FLAGDIR/rtc_setup_flag
 	update-rc.d -f rtc_setup remove

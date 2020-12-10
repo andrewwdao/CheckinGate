@@ -184,8 +184,10 @@ char* __read_response_packet(uint8_t* packet_len)
 {
     if (serialDataAvail(fd)) {
         char header = serialGetchar(fd);
-        if (header != HEADER)
-            printf("\nWarning (__read_response_packet): %02X is not packet header", header);
+        if (header != HEADER) {
+            printf("\nError (__read_response_packet): %02X is not packet header", header);
+            return NULL;
+        }
 
         *packet_len = serialGetchar(fd);
 
@@ -299,9 +301,9 @@ char* uhf_read_rt_inventory()
 
     if (res_len != 0)
     {
-        // printf("res_len: %d data:", res_len);
-        // for (int i = 0; i < res_len; i++) printf("%02X ", res[i]);
-        // printf("\n");
+        //printf("res_len: %d data:", res_len);
+        //for (int i = 0; i < res_len; i++) printf("%02X ", res[i]);
+        //printf("\n");
 
         if (res_len == 6) return "ERR";//printf("Error: 0x%02X\n", res[4]);
         else if (res_len == 12) return "ERR"; // Filter out some random 12 bytes response, don't know why, fix later (maybe?)

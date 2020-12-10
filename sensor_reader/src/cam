@@ -1,5 +1,5 @@
 #!/bin/sh
-ffmpeg -i "rtsp://checkingate:admin123@192.168.1.10$2:554/cam/realmonitor?channel=1&subtype=0" \
+ffmpeg -i "rtsp://checkingate:admin123@192.168.1.101:554/cam/realmonitor?channel=1&subtype=0" \
 	-fflags nobuffer \
 	-probesize 32 \
 	-analyzeduration 0 \
@@ -7,13 +7,26 @@ ffmpeg -i "rtsp://checkingate:admin123@192.168.1.10$2:554/cam/realmonitor?channe
 	-frames 1 \
 	-f image2 \
 	-v 0 \
-	$1/$3_pir$2_%01d.jpg \
+	$1/$2_pir1_%01d.jpg \
 	-y \
 	&
 #img/cam01/img_$(date +%s)_%01d.jpg \
 
+ffmpeg -i "rtsp://checkingate:admin123@192.168.1.102:554/cam/realmonitor?channel=1&subtype=0" \
+	-fflags nobuffer \
+	-probesize 32 \
+	-analyzeduration 0 \
+	-rtsp_transport tcp \
+	-frames 1 \
+	-f image2 \
+	-v 0 \
+	$1/$2_pir2_%01d.jpg \
+	-y \
+	&
+
 cd $1
-excess=`expr $(ls | wc -l) - $4`
+excess=`expr $(ls | wc -l) - $3`
 if [ $excess -gt 0 ]; then
+    echo "REMOVE"
 	rm $(ls | head -n$excess)
 fi

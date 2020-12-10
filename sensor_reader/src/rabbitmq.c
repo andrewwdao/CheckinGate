@@ -1,18 +1,60 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <sys/timeb.h>
+#include <sys/time.h>
 #include <malloc.h>
 #include <string.h>
+
+#include <pthread.h>
 
 #include <amqp_tcp_socket.h>
 
 #include <rabbitmq.h>
-#include <pthread.h>
+#include <sensor_reader.h>
+
 
 amqp_connection_state_t conn;
 amqp_basic_properties_t props;
 
 char *hostname, *username, *password;
 int port;
+
+
+/**
+ *  @brief Get current system time
+ *  @return system time in millisecond
+ */
+uint64_t get_current_time(void)
+{
+	struct timeb ts;
+	ftime(&ts);
+	return (uint64_t)ts.time*1000ll + ts.millitm;
+}
+
+
+/**
+ *  @brief Format recieved message to established standard to send to RabbitMQ
+ *  @param sensor type of sensor
+ *  @param src source of trigger
+ *  @param data data to send
+ *  @return formatted string
+ */
+char* format_message(uint64_t timestamp, char* sensor, char* src, char* data, uint8_t sensor_id)
+{
+	char* message = (char*)malloc(300);
+
+	snprintf(message, 300,
+		"{"
+			"\"timestamp\":%llu,"
+			"\"event_type\":\"%s\","
+			"\"source\":\"%s\","
+			"\"data\":\"%s\""
+		"}",
+		timestamp, sensor, src, data
+	);
+	//printf("%s\n", message);
+	return message;
+}
 
 void rabbitmq_set_connection_params(const char* hostname_, const char* username_, const char* password_, int port_) {
 	hostname = (char*)malloc(sizeof(char)*strlen(hostname_)+1);

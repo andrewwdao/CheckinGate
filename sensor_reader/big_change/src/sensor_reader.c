@@ -117,6 +117,34 @@ void uhf_read_handler(char* read_data) {
 	#endif
 }
 
+void resetup()
+{
+	printf("RESETUP\n");
+	fflush(stdout);
+
+	#if en_pir
+		printf("Init PIRs...\n");
+		pir_init(PIR_1_PIN, PIR_2_PIN, PIR_3_PIN);
+	#endif
+
+	#if en_rfid
+		printf("Init RFIDs...\n");
+		// --- RFID 1
+		rfid_init(MAIN_RFID_1, RFID_1_D0_PIN, RFID_1_D1_PIN, RFID_NO_OE_PIN);
+		// --- RFID 2
+		rfid_init(MAIN_RFID_2, RFID_2_D0_PIN, RFID_2_D1_PIN, RFID_NO_OE_PIN);
+	#endif
+
+	// --- UHF
+	#if en_uhf_w26
+		printf("Init UHF RFID (Wiegand 26)...\n");
+		rfid_init(MAIN_UHF, UHF_D0_PIN, UHF_D1_PIN, RFID_NO_OE_PIN);
+		//rfid_init(MAIN_UHF, UHF_D0_PIN, UHF_D1_PIN, RFID_NO_OE_PIN, NULL, NULL, NULL);
+	#endif
+
+	sleep(30);
+}
+
 int main(int argc, char** argv) {
 
 	#if en_rabbitmq
@@ -160,7 +188,8 @@ int main(int argc, char** argv) {
 	printf("System Ready!\n");
 	fflush(stdout);
 
-	while (1) pause();
+	// while (1) pause();
+	while (1) resetup();
 
 	return 0;
 }

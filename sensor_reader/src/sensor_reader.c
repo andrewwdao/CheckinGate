@@ -18,8 +18,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
-#include <sys/timeb.h>
-#include <sys/time.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <wiringPi.h>
@@ -28,75 +26,21 @@
 #include <pir.h>
 #include <rfid.h>
 #include <uhf.h>
+#include <sensor_reader.h>
 
-
-#define en_rabbitmq   0
-#define en_pir		  0
-#define en_rfid	 	  0
-#define en_uhf_w26    1
-#define en_uhf_rs23   0
-#define en_camera	  0
-
-
-// ------------------------- Constants -----------------------------------
-// --- RabitMQ server infos
-#define EXCHANGE_NAME 		"ex_sensors"
-#define ROUTING_KEY_PREFIX	"event"
-#define HOST				"demo1.gate.mekosoft.vn"
-#define USERNAME			"admin"
-#define PASSWORD			"admin"
-#define PORT 				5672
-
-// --- PIR parameters
-#define PIR_DEBOUNCE 	   200000 //us
-#define PIR_STATE_DEBOUNCE 1000 //us
-#define PIR_CNT	    	   3
-#define PIR_1_PIN	       4  //wiringpi pin
-#define PIR_2_PIN	       1  //wiringpi pin
-#define PIR_3_PIN	       3  //wiringpi pin
-#define PIR_STATE_ID	   3
-#define OTHER_SENSOR_ID    0
-
-// --- RFID parameters
-#define MAIN_RFID_1 0 //index for rfid module 1
-#define MAIN_RFID_2 1 //index for rfid module 2
-#define RFID_1_D0_PIN 7 //wiringpi pin
-#define RFID_1_D1_PIN 0 //wiringpi pin
-#define RFID_2_D0_PIN 2 //wiringpi pin
-#define RFID_2_D1_PIN 3 //wiringpi pin
-#define OE_PIN 		  11 //wiringpi pin
-
-// --- UHF parameters
-#define UHF_PORT 	  "/dev/serial0"
-#define UHF_BAUDRATE  115200
-#define MAIN_UHF   2  //index for rfid module 2
-#define UHF_D0_PIN 10 //wiringpi pin
-#define UHF_D1_PIN 11 //wiringpi pin
-
-// --- Camera parameter
-#define IMAGE_LIMIT	  10000
-#define IMAGE_DIR 	  "./web/public/images"
 pthread_t camera_thread_id;
 // ------------------------- Variables -----------------------------------
 // --- PIR
-uint8_t pir_flags[PIR_CNT+1]; //2 pir sensor but we want the index to start at 1
-uint8_t pir_debounce_flag[PIR_CNT+1]; //2 pir sensor but we want the index to start at 1
-pthread_t pir_thread_id;
-int pir_state_debounce = 0;
+
 // --- UHF
 pthread_t uhf_thread_id;
 // --- Keep track of time
-uint64_t now[PIR_CNT+1];
+uint64_t now;
 
 // ------ Private function prototypes -------------------------
 void* img_erase_thread(void*);
-void* pir_send_thread(void*);
 void* uhf_thread(void*);
 void camera_init(void);
-uint64_t get_current_time(void);
-char* format_message(char*, char*, char*, uint8_t);
-void pir_isr_handler(uint8_t);
-void rfid_timeout_handler(uint8_t, uint32_t);
 void uhf_read_handler(char*);
 //--------------------------------------------------------------
 // FUNCTION DEFINITIONS
@@ -115,34 +59,6 @@ void* img_erase_thread(void* arg)
 }
 
 /**
- *  @brief send pir interrupt signal to rabbitMQ
- *  @param arg id of the pir to be sent
- *  @return void*
- */
-void* pir_send_thread(void* arg) {
-	uint8_t id = (arg != NULL ? *(uint8_t*)arg : PIR_STATE_ID);
-
-	if (en_rabbitmq) {
-		char pir_src[10];
-		snprintf(pir_src, 10, "pir.%d", id);
-		char routing_key[30];
-		snprintf(routing_key, 20, "%s.%s", ROUTING_KEY_PREFIX, pir_src);
-		char data[20];
-		snprintf(data, 10, "pir_id:%d", id);
-
-		send_message(format_message("pir", pir_src, data, id),
-				 	 EXCHANGE_NAME, routing_key);
-	}
-
-	// Remove these lines if threads are used
-	id != PIR_STATE_ID ?
-		usleep(PIR_DEBOUNCE) :
-		usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
-	// if (id != PIR_STATE_ID) usleep(PIR_DEBOUNCE);
-	pir_debounce_flag[id] = 1;
-}
-
-/**
  *  @brief UHF always-on thread to catch RS232 signal
  *  @note: This function will be replaced when wiegand26 protocol is applied for UHF reader
  *  @param arg void argument for the thread to be created
@@ -150,7 +66,10 @@ void* pir_send_thread(void* arg) {
  */
 void* uhf_thread(void* arg) {
 	while(1) {
+		//uhf_realtime_inventory();
 		char* data = uhf_read_rt_inventory();
+
+		if (data == NULL) continue;
 		
 		if (!(data[0] == 'E' && data[1] == 'R' &&
 			data[2] == 'R' && data[3] == '\0')) {
@@ -162,6 +81,8 @@ void* uhf_thread(void* arg) {
 	// 	char* data = uhf_read_tag();
 	// 	uhf_read_handler(data);
 	// }
+
+    usleep(UHF_DELAY);
 }
 
 
@@ -171,124 +92,11 @@ void* uhf_thread(void* arg) {
 void camera_init(void)
 {
 	char cmd[100];
-	snprintf(cmd, 100, "./sensor_reader/src/cam %s 1 0 %d", IMAGE_DIR, IMAGE_LIMIT);
+	snprintf(cmd, 100, "./sensor_reader/src/cam %s 0 %d", IMAGE_DIR, IMAGE_LIMIT);
 	system(cmd);
-	snprintf(cmd, 100, "./sensor_reader/src/cam %s 2 0 %d", IMAGE_DIR, IMAGE_LIMIT);
-	pthread_create(&camera_thread_id, NULL, img_erase_thread, NULL);
+	//snprintf(cmd, 100, "./sensor_reader/src/cam %s 2 0 %d", IMAGE_DIR, IMAGE_LIMIT);
+	//pthread_create(&camera_thread_id, NULL, img_erase_thread, NULL);
 
-}
-
-/**
- *  @brief Get current system time
- *  @return system time in millisecond
- */
-uint64_t get_current_time(void)
-{
-	struct timeb ts;
-	ftime(&ts);
-	return (uint64_t)ts.time*1000ll + ts.millitm;
-}
-
-/**
- *  @brief Format recieved message to established standard to send to RabbitMQ
- *  @param sensor type of sensor
- *  @param src source of trigger
- *  @param data data to send
- *  @return formatted string
- */
-char* format_message(char* sensor, char* src, char* data, uint8_t sensor_id)
-{
-	char* message = (char*)malloc(300);
-
-	snprintf(message, 300,
-		"{"
-			"\"timestamp\":%llu,"
-			"\"event_type\":\"%s\","
-			"\"source\":\"%s\","
-			"\"data\":\"%s\""
-		"}",
-		now[sensor_id], sensor, src, data
-	);
-
-	return message;
-}
-
-/**
- *  @brief ISR handler for PIR sensors
- *  @param id id of the pir to be sent
- */
-void pir_isr_handler(uint8_t id) {
-	if (en_uhf_rs23)
-		uhf_realtime_inventory();
-
-	if (pir_debounce_flag[id]) {
-		pir_debounce_flag[id] = 0;
-
-		printf("PIR: %d\n", id);
-		fflush(stdout);
-		now[id] = get_current_time();
-
-		// --- capture camera
-		if (en_camera) {
-			char cmd[100];
-			snprintf(cmd, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 1, now[id], IMAGE_LIMIT);
-			system(cmd);
-
-			char cmd2[100];
-			snprintf(cmd2, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 2, now[id], IMAGE_LIMIT);
-			system(cmd2);
-		}
-
-		pthread_create(&pir_thread_id, NULL, pir_send_thread, &id);
-	}
-}
-
-void* pir_state_reader(void* arg) {
-	while (1) {
-        if (pir_debounce_flag[PIR_STATE_ID] && !digitalRead(PIR_3_PIN)) {
-			if (en_uhf_rs23)
-				uhf_realtime_inventory();
-			
-			pir_debounce_flag[PIR_STATE_ID] = 0;
-            printf("PIR: %d\n", PIR_STATE_ID);
-            fflush(stdout);
-
-			now[PIR_STATE_ID] = get_current_time();
-			pir_send_thread(NULL);
-        }
-        // usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
-		usleep(100);
-    }
-}
-
-/**
- *  @brief timeout handler for wiegand26 protocol
- *  @param id id of the rfid being captured
- *  @param fullcode tag ID of the RFID
- */
-void rfid_timeout_handler(uint8_t id, uint32_t fullcode) {
-	++id;
-	if (!fullcode) {
-		printf("RFID %d: CHECKSUM FAILED\n", id);
-		return;
-	}
-
-	printf("RFID %d: 0x%06X\n", id, fullcode);
-	fflush(stdout);
-
-	char rfid_src[10];
-	snprintf(rfid_src, 10, "rfid.%d", id);
-	char routing_key[20];
-	snprintf(routing_key, 20, "%s.%s", ROUTING_KEY_PREFIX, rfid_src);
-	char data[20];
-	snprintf(data, 20, "tag_id:0x%06X", fullcode);
-
-	if (en_rabbitmq) {
-		now[OTHER_SENSOR_ID] = get_current_time();
-		char* formatted_message = format_message("rfid", rfid_src, data, OTHER_SENSOR_ID);
-		send_message(formatted_message, EXCHANGE_NAME, routing_key);
-		if (formatted_message != NULL) free(formatted_message);
-	}
 }
 
 /**
@@ -304,68 +112,59 @@ void uhf_read_handler(char* read_data) {
 
 	if (read_data != NULL) free(read_data);
 
-	if (en_rabbitmq) {
-		now[OTHER_SENSOR_ID] = get_current_time();
-		char* formatted_message = format_message("rfid", uhf_src, data, OTHER_SENSOR_ID);
+	#if en_rabbitmq
+		now = get_current_time();
+		char* formatted_message = format_message(get_current_time(), "rfid", uhf_src, data, OTHER_SENSOR_ID);
 		send_message(formatted_message, EXCHANGE_NAME, routing_key);
 		if (formatted_message != NULL) free(formatted_message);
-	}
+	#endif
 }
-
 
 int main(int argc, char** argv) {
 
-	if (en_rabbitmq) {
+	#if en_rabbitmq
 		printf("Init RabbitMQ...\n");
 		rabbitmq_set_connection_params(HOST, USERNAME, PASSWORD, PORT);
 		rabbitmq_init();
-	}
+	#endif
 
-	if (en_pir) {
-		if (argc > 1) pir_state_debounce = atoi(argv[1]);
+	#if en_pir
 		printf("Init PIRs...\n");
-		for (uint8_t i=0;i<=PIR_CNT;i++) *(pir_flags+i)= !(*(pir_debounce_flag+i) = 1); //set all pir_flags to 0 and all pir_debounce_flag to 1 
-		pir_set_ext_isr(pir_isr_handler);
-		pir_set_ext_state_reader(pir_state_reader);
 		pir_init(PIR_1_PIN, PIR_2_PIN, PIR_3_PIN);
-	}
+	#endif
 
-	if (en_rfid) {
+	#if en_rfid
 		printf("Init RFIDs...\n");
 		// --- RFID 1
-		void rfid_1_d0_isr RFID_CREATE_ISR_HANDLER(MAIN_RFID_1, RFID_D0_BIT)
-		void rfid_1_d1_isr RFID_CREATE_ISR_HANDLER(MAIN_RFID_1, RFID_D1_BIT)
-		rfid_init(MAIN_RFID_1, RFID_1_D0_PIN, RFID_1_D1_PIN, RFID_NO_OE_PIN, rfid_1_d0_isr, rfid_1_d1_isr, rfid_timeout_handler);
+		rfid_init(MAIN_RFID_1, RFID_1_D0_PIN, RFID_1_D1_PIN, RFID_NO_OE_PIN);
 		// --- RFID 2
-		void rfid_2_d0_isr RFID_CREATE_ISR_HANDLER(MAIN_RFID_2, RFID_D0_BIT)
-		void rfid_2_d1_isr RFID_CREATE_ISR_HANDLER(MAIN_RFID_2, RFID_D1_BIT)
-		rfid_init(MAIN_RFID_2, RFID_2_D0_PIN, RFID_2_D1_PIN, RFID_NO_OE_PIN, rfid_2_d0_isr, rfid_2_d1_isr, rfid_timeout_handler);
-	}
+		rfid_init(MAIN_RFID_2, RFID_2_D0_PIN, RFID_2_D1_PIN, RFID_NO_OE_PIN);
+	#endif
 
 	// --- UHF
-	if (en_uhf_w26) {
+	#if en_uhf_w26
 		printf("Init UHF RFID (Wiegand 26)...\n");
-		void uhf_d0_isr RFID_CREATE_ISR_HANDLER(MAIN_UHF, RFID_D0_BIT)
-		void uhf_d1_isr RFID_CREATE_ISR_HANDLER(MAIN_UHF, RFID_D1_BIT)
-		rfid_init(MAIN_UHF, UHF_D0_PIN, UHF_D1_PIN, RFID_NO_OE_PIN, uhf_d0_isr, uhf_d1_isr, rfid_timeout_handler);
-	}
+		rfid_init(MAIN_UHF, UHF_D0_PIN, UHF_D1_PIN, RFID_NO_OE_PIN);
+		//rfid_init(MAIN_UHF, UHF_D0_PIN, UHF_D1_PIN, RFID_NO_OE_PIN, NULL, NULL, NULL);
+	#endif
 
-	if (en_uhf_rs23) {
+	#if en_uhf_rs232
 		printf("Init UHF RFID (RS232)...\n");
 		uhf_set_param(EPC_MEMBANK, 0x01, 7);
 		uhf_init(UHF_PORT, UHF_BAUDRATE, OE_PIN);
 		pthread_create(&uhf_thread_id, NULL, uhf_thread, NULL);
-	}
+	#endif
 
-	if (en_camera) {
+	#if en_camera
 		printf("Init Camera...\n");
 		camera_init();
-	}
+	#endif
 
 	printf("System Ready!\n");
 	fflush(stdout);
 
-	while(1) pause();
+	while (1) pause();
+
 	return 0;
 }
 

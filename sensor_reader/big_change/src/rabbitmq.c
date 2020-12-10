@@ -12,13 +12,14 @@
 #include <rabbitmq.h>
 #include <sensor_reader.h>
 
+#define CONNECTION_COUNT 1
 
-amqp_connection_state_t conn;
+amqp_connection_state_t conn[CONNECTION_COUNT];
 amqp_basic_properties_t props;
 
 char *hostname, *username, *password;
 int port;
-
+int current_connection = 0;
 
 /**
  *  @brief Get current system time
@@ -69,13 +70,13 @@ void rabbitmq_set_connection_params(const char* hostname_, const char* username_
 	port = port_;
 }
 
-int rabbitmq_init() {
+void rabbitmq_init_with_id(int id) {
 	int status;
 
-	conn = amqp_new_connection();
+	conn[id] = amqp_new_connection();
 
 	amqp_socket_t *socket = NULL;
-	socket = amqp_tcp_socket_new(conn);
+	socket = amqp_tcp_socket_new(conn[id]);
 	if (!socket) {
 		printf("Problem creating TCP socket\n");
 		//return 1;
@@ -86,31 +87,38 @@ int rabbitmq_init() {
 		printf("Problem opening TCP socket\n");
 	}
 
-	amqp_login(conn, "/", 0, 131072, 30, AMQP_SASL_METHOD_PLAIN, username, password);
-	amqp_channel_open(conn, 1);
-	amqp_get_rpc_reply(conn);
+	amqp_login(conn[id], "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, username, password);
+	amqp_channel_open(conn[id], 1);
+	amqp_get_rpc_reply(conn[id]);
 
 	props._flags = AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
 	props.content_type = amqp_cstring_bytes("text/plain");
-    props.delivery_mode = 2; /* persistent delivery mode */
+	props.delivery_mode = 2; /* persistent delivery mode */
+}
+
+int rabbitmq_init() {
+	for (int i = 0; i < CONNECTION_COUNT; ++i) {
+		rabbitmq_init_with_id(i);
+	}
 
 	return 0;
 }
 
 void send_message(char* message, char* exchange, char* routingkey) {
-	int status = amqp_basic_publish(conn, 1, amqp_cstring_bytes(exchange),
+	int status = amqp_basic_publish(conn[current_connection], 1, amqp_cstring_bytes(exchange),
 							  amqp_cstring_bytes(routingkey), 0, 0,
 							  &props, amqp_cstring_bytes(message));
 
 	if (status != AMQP_STATUS_OK) {
-		rabbitmq_init();
+		rabbitmq_init_with_id(current_connection);
+		current_connection = (current_connection + 1)%CONNECTION_COUNT;
 		send_message(message, exchange, routingkey);
 		printf("CONNECTION RECOVERED!\n");
 	}
 }
 
 void close_connection() {
-	amqp_channel_close(conn, 1, AMQP_REPLY_SUCCESS);
-	amqp_connection_close(conn, AMQP_REPLY_SUCCESS);
-	amqp_destroy_connection(conn);
+	amqp_channel_close(conn[current_connection], 1, AMQP_REPLY_SUCCESS);
+	amqp_connection_close(conn[current_connection], AMQP_REPLY_SUCCESS);
+	amqp_destroy_connection(conn[current_connection]);
 }

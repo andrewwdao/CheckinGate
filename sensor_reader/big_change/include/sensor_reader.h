@@ -2,8 +2,8 @@
 #define en_rabbitmq   1
 #define en_pir		  1
 #define en_rfid	 	  0
-#define en_uhf_w26    1
-#define en_uhf_rs232  0
+#define en_uhf_w26    0
+#define en_uhf_rs232  1
 #define en_camera	  1
 
 // ------------------------- Constants -----------------------------------
@@ -17,7 +17,7 @@
 
 // --- PIR parameters
 #define PIR_DEBOUNCE 	   200000 //us
-#define PIR_STATE_DEBOUNCE 20000 //us
+#define PIR_STATE_DEBOUNCE 100000 //us
 #define PIR_CNT	    	   3
 #define PIR_1_PIN	       4  //wiringpi pin
 #define PIR_2_PIN	       1  //wiringpi pin
@@ -40,6 +40,7 @@
 #define MAIN_UHF   3  //index for uhf
 #define UHF_D0_PIN 10 //wiringpi pin
 #define UHF_D1_PIN 11 //wiringpi pin
+#define UHF_DELAY  5000 //read interval (ms)
 
 // --- Camera parameter
 #define IMAGE_LIMIT	  10000

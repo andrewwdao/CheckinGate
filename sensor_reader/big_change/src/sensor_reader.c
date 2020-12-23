@@ -124,7 +124,7 @@ void resetup()
 
 	#if en_pir
 		printf("Init PIRs...\n");
-		pir_init(PIR_1_PIN, PIR_2_PIN, PIR_3_PIN);
+		pir_init(PIR_1_PIN, PIR_2_PIN, PIR_NO_PIN);
 	#endif
 
 	#if en_rfid
@@ -141,8 +141,6 @@ void resetup()
 		rfid_init(MAIN_UHF, UHF_D0_PIN, UHF_D1_PIN, RFID_NO_OE_PIN);
 		//rfid_init(MAIN_UHF, UHF_D0_PIN, UHF_D1_PIN, RFID_NO_OE_PIN, NULL, NULL, NULL);
 	#endif
-
-	sleep(30);
 }
 
 int main(int argc, char** argv) {
@@ -189,7 +187,10 @@ int main(int argc, char** argv) {
 	fflush(stdout);
 
 	// while (1) pause();
-	while (1) resetup();
+	while (1) {
+        resetup();
+        sleep(30);
+    }
 
 	return 0;
 }

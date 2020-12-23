@@ -17,7 +17,6 @@ int pir_state_pin = -1;
 uint8_t pir_flags[PIR_CNT+1]; //2 pir sensor but we want the index to start at 1
 uint8_t pir_debounce_flag[PIR_CNT+1]; //2 pir sensor but we want the index to start at 1
 pthread_t pir_thread_id;
-int pir_state_debounce = 0;
 
 int pir1_id = 1, pir2_id = 2;
 
@@ -39,8 +38,8 @@ void* pir_send_thread(void* arg) {
         snprintf(cmd, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 1, now[id], IMAGE_LIMIT);
         system(cmd);
 
-        // snprintf(cmd, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 2, now[id], IMAGE_LIMIT);
-        // system(cmd);
+        snprintf(cmd, 100, "./sensor_reader/src/cam %s %d %llu %d", IMAGE_DIR, 2, now[id], IMAGE_LIMIT);
+        system(cmd);
     }
     #endif
 
@@ -60,8 +59,10 @@ void* pir_send_thread(void* arg) {
 	// id != PIR_STATE_ID ?
 	// 	usleep(PIR_DEBOUNCE) :
 	// 	usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
-	if (id != PIR_STATE_ID) usleep(PIR_DEBOUNCE);
-	pir_debounce_flag[id] = 1;
+	if (id != PIR_STATE_ID) {
+        usleep(PIR_DEBOUNCE);
+        pir_debounce_flag[id] = 1;
+    }
 }
 
 void pir_1_isr() {
@@ -91,12 +92,11 @@ void pir_2_isr() {
 
 void* pir_3_reader(void* arg) {
 	while (1) {
-        if (pir_debounce_flag[PIR_STATE_ID] && !digitalRead(PIR_3_PIN)) {
+        if (!digitalRead(PIR_3_PIN)) {
 			#if en_uhf_rs232
 				uhf_realtime_inventory();
 			#endif
 			
-			pir_debounce_flag[PIR_STATE_ID] = 0;
             printf("PIR: %d\n", PIR_STATE_ID);
             fflush(stdout);
 
@@ -106,8 +106,8 @@ void* pir_3_reader(void* arg) {
 				pir_send_thread(NULL);
 			#endif
         }
-        usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
-		// usleep(200);
+
+        usleep(PIR_STATE_DEBOUNCE);
     }
 }
 

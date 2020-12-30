@@ -16,7 +16,7 @@ fi
 echo ""
 echo "================================================"
 echo ""
-echo "            Disabling serial console"
+echo "     Disabling serial console (for UHF RS232)"
 echo ""
 echo "================================================"
 echo ""
@@ -242,7 +242,7 @@ WorkingDirectory=/home/pi/demo1.checkingate.mekosoft.vn
 Restart=always
 RestartSec=1000ms
 
-User=$(whoami)
+User=pi
 
 [Install]
 WantedBy=sysinit.target multi-user.target
@@ -263,7 +263,7 @@ WorkingDirectory=$HOME/demo1.checkingate.mekosoft.vn
 Restart=always
 RestartSec=1000ms
 
-User=$(whoami)
+User=pi
 
 [Install]
 WantedBy=sysinit.target multi-user.target

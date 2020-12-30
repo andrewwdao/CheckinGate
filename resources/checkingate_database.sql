@@ -1,3 +1,7 @@
+drop database if exists checkingate;
+create database checkingate;
+use checkingate;
+
 create table checkin_events(
 	id int(11) auto_increment primary key,
 	gateId varchar(255) not null ,

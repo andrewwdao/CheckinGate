@@ -1,18 +1,26 @@
 #!/bin/bash
 
-#============================================#
-#          DO THIS MANUALLY PLEASE           #
-#============================================#
-# Run sudo raspi-config
-# Go to Interface -> Serial -> Disable serial console log in
-
-
 set -eu -o pipefail # fail on error , debug all lines
 
 if [ 'root' != $( whoami ) ] ; then
   echo "Please run as root! ( sudo ${0} )"
   exit 1;
 fi
+
+#============================================#
+#          Disabling serial console          #
+#============================================#
+# Run sudo raspi-config
+# Go to Interface -> Serial -> Disable serial console log in
+
+echo ""
+echo "================================================"
+echo ""
+echo "            Disabling serial console"
+echo ""
+echo "================================================"
+echo ""
+sed -i "0,/console=serial0,115200 /s///" /boot/cmdline.txt
 
 #============================================#
 #        Setting up static IP for eth0       #
@@ -58,9 +66,9 @@ echo ""
 echo "================================================"
 echo ""
 apt-get update -y && apt-get upgrade -y
-apt-get install default-jre git rabbitmq-server mariadb-server wiringpi git npm ntp vim python-pip python3-pip -y
+apt-get install default-jre git rabbitmq-server mariadb-server wiringpi git npm ntp vim python-pip python3-pip ffmpeg -y
 sudo -H -u pi bash -c 'pip install pyserial'
-sudo -H -u pi bash -c 'pip3 install pyserial wiringpi'
+sudo -H -u pi bash -c 'pip3 install pyserial wiringpi pika'
 
 #============================================#
 #      Cloning and building the source       #
@@ -115,9 +123,45 @@ echo ""
 echo "drop user admin@localhost;" | mysql
 echo "FLUSH PRIVILEGES;" | mysql
 echo "DELETE FROM mysql.user WHERE User = 'admin';" | mysql
-echo "CREATE USER 'admin'@'localhost' IDENTIFIED BY 'password';" | mysql
+echo "CREATE USER 'admin'@'localhost' IDENTIFIED BY 'admin123';" | mysql
 echo "GRANT ALL PRIVILEGES ON * . * TO 'admin'@'localhost';" | mysql
 echo "FLUSH PRIVILEGES;" | mysql
+echo "
+drop database if exists checkingate;
+create database checkingate;
+use checkingate;
+
+create table checkin_events(
+	id int(11) auto_increment primary key,
+	gateId varchar(255) not null ,
+    timestamp bigint(20) not null ,
+    datetime datetime not null ,
+    direction varchar(255) not null ,
+    rfidTag varchar(255) not null ,
+    personalName varchar(255) not null ,
+    personalCode varchar(255) not null);
+    
+create table events(
+	id int(11) auto_increment primary key,
+    version varchar(255) not null ,
+    host varchar(255) not null ,
+    timestamp bigint(20) not null ,
+    event_type varchar(255) not null ,
+    source varchar(255) not null ,
+    short_message varchar(255) not null ,
+    full_message text not null ,
+    data varchar(255) not null);
+    
+create table nhan_vien(
+	id int(11) auto_increment primary key,
+    manv varchar(255) not null ,
+    rfid_tag varchar(255) not null ,
+    ho_ten varchar(255) not null ,
+    don_vi varchar(255) not null ,
+    dien_thoai varchar(255) not null ,
+    email varchar(255) not null);
+" | mysql
+
 
 echo "Done"
 
@@ -151,6 +195,8 @@ echo ""
 cd /home/pi/demo1.checkingate.mekosoft.vn/sensor_reader
 make clean
 make > /dev/null
+
+chmod +x /home/pi/demo1.checkingate.mekosoft.vn/sensor_reader/src/cam
 
 
 #============================================#
@@ -286,6 +332,15 @@ echo ""
 echo "================================================"
 echo ""
 
+rabbitmqctl stop_app
+rabbitmqctl reset
+rabbitmqctl start_app
+rabbitmqctl add_user admin admin
+rabbitmqctl set_user_tags admin administrator
+rabbitmqctl set_user_tags admin management
+rabbitmqctl set_permissions -p / admin ".*" ".*" ".*"
+rabbitmq-plugins enable rabbitmq_management
+
 echo "
 BusHost=demo1.gate.mekosoft.vn
 BusAccount=admin
@@ -301,18 +356,12 @@ DbPassword=admin
 PirSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/TakePhoto.wav
 RfidSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/Checkin.wav
 WelcomeSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/WelcomeToCheckinGate.wav
-" > /tmp/config.properties
+" > /home/pi/demo1.checkingate.mekosoft.vn
 
 if [ -f vn.mekosoft.checkin.logger.QueueManager.jar ]; then
 	echo "Running java -jar vn.mekosoft.checkin.logger.QueueManager.jar"
 	java -jar vn.mekosoft.checkin.logger.QueueManager.jar
 fi
-
-rabbitmqctl add_user admin admin
-rabbitmqctl set_user_tags admin administrator
-rabbitmqctl set_user_tags admin management
-rabbitmqctl set_permissions -p / admin ".*" ".*" ".*"
-rabbitmq-plugins enable rabbitmq_management
 
 
 #============================================#

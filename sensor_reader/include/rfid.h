@@ -8,8 +8,6 @@
     handle_isr(id, bit); \
 }
 
-uint8_t rfid_init(uint8_t,uint8_t,uint8_t,int8_t,void(*)(),void(*)(),void(*)(uint8_t,uint32_t));
+uint8_t rfid_init(uint8_t,uint8_t,uint8_t,int8_t);
 void rfid_showUsage(void);
 
-void handle_isr(uint8_t, uint8_t);
-void rfid_set_ext_timeout_handler(void(*)(),uint8_t);

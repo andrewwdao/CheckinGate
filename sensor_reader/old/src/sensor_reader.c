@@ -66,6 +66,7 @@ void* img_erase_thread(void* arg)
  */
 void* uhf_thread(void* arg) {
 	while(1) {
+		//uhf_realtime_inventory();
 		char* data = uhf_read_rt_inventory();
 
 		if (data == NULL) continue;
@@ -80,6 +81,8 @@ void* uhf_thread(void* arg) {
 	// 	char* data = uhf_read_tag();
 	// 	uhf_read_handler(data);
 	// }
+
+    usleep(UHF_DELAY);
 }
 
 
@@ -89,9 +92,9 @@ void* uhf_thread(void* arg) {
 void camera_init(void)
 {
 	char cmd[100];
-	snprintf(cmd, 100, "./sensor_reader/src/cam %s 1 0 %d", IMAGE_DIR, IMAGE_LIMIT);
+	snprintf(cmd, 100, "./sensor_reader/src/cam %s 0 %d", IMAGE_DIR, IMAGE_LIMIT);
 	system(cmd);
-	snprintf(cmd, 100, "./sensor_reader/src/cam %s 2 0 %d", IMAGE_DIR, IMAGE_LIMIT);
+	//snprintf(cmd, 100, "./sensor_reader/src/cam %s 2 0 %d", IMAGE_DIR, IMAGE_LIMIT);
 	//pthread_create(&camera_thread_id, NULL, img_erase_thread, NULL);
 
 }
@@ -114,32 +117,6 @@ void uhf_read_handler(char* read_data) {
 		char* formatted_message = format_message(get_current_time(), "rfid", uhf_src, data, OTHER_SENSOR_ID);
 		send_message(formatted_message, EXCHANGE_NAME, routing_key);
 		if (formatted_message != NULL) free(formatted_message);
-	#endif
-}
-
-void resetup()
-{
-	printf("RESETUP\n");
-	fflush(stdout);
-
-	#if en_pir
-		printf("Init PIRs...\n");
-		pir_init(PIR_1_PIN, PIR_2_PIN, PIR_NO_PIN);
-	#endif
-
-	#if en_rfid
-		printf("Init RFIDs...\n");
-		// --- RFID 1
-		rfid_init(MAIN_RFID_1, RFID_1_D0_PIN, RFID_1_D1_PIN, RFID_NO_OE_PIN);
-		// --- RFID 2
-		rfid_init(MAIN_RFID_2, RFID_2_D0_PIN, RFID_2_D1_PIN, RFID_NO_OE_PIN);
-	#endif
-
-	// --- UHF
-	#if en_uhf_w26
-		printf("Init UHF RFID (Wiegand 26)...\n");
-		rfid_init(MAIN_UHF, UHF_D0_PIN, UHF_D1_PIN, RFID_NO_OE_PIN);
-		//rfid_init(MAIN_UHF, UHF_D0_PIN, UHF_D1_PIN, RFID_NO_OE_PIN, NULL, NULL, NULL);
 	#endif
 }
 
@@ -186,11 +163,7 @@ int main(int argc, char** argv) {
 	printf("System Ready!\n");
 	fflush(stdout);
 
-	// while (1) pause();
-	while (1) {
-        resetup();
-        sleep(30);
-    }
+	while (1) pause();
 
 	return 0;
 }

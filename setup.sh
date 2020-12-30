@@ -360,7 +360,9 @@ WelcomeSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/WelcomeT
 
 if [ -f vn.mekosoft.checkin.logger.QueueManager.jar ]; then
 	echo "Running java -jar vn.mekosoft.checkin.logger.QueueManager.jar"
-	java -jar vn.mekosoft.checkin.logger.QueueManager.jar
+	cp /home/pi/demo1.checkingate.mekosoft.vn/config.properties /tmp
+	#java -jar vn.mekosoft.checkin.logger.QueueManager.jar
+	su -c "java -jar vn.mekosoft.checkin.logger.QueueManager.jar" pi
 fi
 
 

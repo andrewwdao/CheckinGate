@@ -209,7 +209,7 @@ app.get('/edit/:id', (req, res) => {
 });
 
 app.post('/edit', (req, res) => {
-  var sql = `UPDATE nhan_vien SET ho_ten = "${req.body.txtHoten}", don_vi = "${req.body.txtDonvi}" , dien_thoai = "${req.body.txtDienthoai}"  WHERE id = ${req.body.userId}`;
+  var sql = `UPDATE nhan_vien SET rfid_tag = "${req.body.txtRfidTag}", ho_ten = "${req.body.txtHoten}", don_vi = "${req.body.txtDonvi}" , dien_thoai = "${req.body.txtDienthoai}"  WHERE id = ${req.body.userId}`;
   conn.query(sql, function (err, result) {
     if (err) throw err;
     console.log('1 record change');
@@ -247,6 +247,7 @@ app.post('/uploadexcel', (req, res) => {
     if (err instanceof multer.MulterError) {
       console.log('Đã xảy ra lỗi Multer khi tải lên.');
     } else if (err) {
+	  console.log(err);
       res.render('alert', { errMess: 'Chỉ được phép tải lên file excel ' });
       //console.log("An unknown error occurred when uploading." + err);
     } else if (!req.file) {

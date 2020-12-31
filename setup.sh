@@ -17,8 +17,14 @@ fi
 #============================================#
 #        Setting up static IP for eth0       #
 #============================================#
-
 if [ $(egrep '^interface eth0' /etc/dhcpcd.conf | wc -l) -eq 0 ]; then
+	echo ""
+	echo "================================================"
+	echo ""
+	echo "          Setting up static IP for eth0"
+	echo ""
+	echo "================================================"
+	echo ""
 	sed -i "0,/#interface eth0/{s/#\(interface eth0\)/\1/}" /etc/dhcpcd.conf
 	sed -i "0,/#static ip_address/{s/#\(static ip_address=\).*/\1192\.168\.1\.1\/24/}" /etc/dhcpcd.conf
 	sed -i "0,/#static domain_name_servers/{s/#\(static domain_name_servers=\).*/\1192\.168\.1\.1 172\.18\.27\.6 172\.18\.27\.8 8\.8\.8\.8/}" /etc/dhcpcd.conf
@@ -30,6 +36,13 @@ fi
 #============================================#
 
 if [ $(grep 'demo1.gate.mekosoft.vn' /etc/hosts | wc -l) -eq 0 ]; then
+	echo ""
+	echo "================================================"
+	echo ""
+	echo "                  Adding hostname"
+	echo ""
+	echo "================================================"
+	echo ""
 	echo "127.0.0.1   demo1.gate.mekosoft.vn" >> /etc/hosts
 	echo "127.0.1.1   demo1.gate.mekosoft.vn" >> /etc/hosts
 fi
@@ -37,8 +50,15 @@ fi
 #============================================#
 #        Installing the core packages        #
 #============================================#
+echo ""
+echo "================================================"
+echo ""
+echo "           Installing core packages..."
+echo ""
+echo "================================================"
+echo ""
 apt-get update -y && apt-get upgrade -y
-apt-get install git rabbitmq-server mariadb-server wiringpi git npm ntp vim python-pip python3-pip -y
+apt-get install default-jre git rabbitmq-server mariadb-server wiringpi git npm ntp vim python-pip python3-pip -y
 sudo -H -u pi bash -c 'pip install pyserial'
 sudo -H -u pi bash -c 'pip3 install pyserial wiringpi'
 
@@ -52,13 +72,27 @@ sudo -H -u pi bash -c 'pip3 install pyserial wiringpi'
 #============================================#
 #          Enabling rabbitmq-server          #
 #============================================#
-systemctl enable  rabbitmq-server
+echo ""
+echo "================================================"
+echo ""
+echo "        Enabling rabbitmq-server service"
+echo ""
+echo "================================================"
+echo ""
+systemctl enable rabbitmq-server
 systemctl start rabbitmq-server
 
 #============================================#
 #            Setting up NTP server           #
 #============================================#
 if [ $(grep 'restrict 192.168.1.0 mask 255.255.255.0' /etc/ntp.conf | wc -l) -eq 0 ]; then
+	echo ""
+	echo "================================================"
+	echo ""
+	echo "            Configuring NTP Server"
+	echo ""
+	echo "================================================"
+	echo ""
 	echo "
 	restrict 192.168.1.0 mask 255.255.255.0
 	broadcast 192.168.1.255
@@ -70,14 +104,35 @@ fi
 #============================================#
 #          Setting up MariaDB Server         #
 #============================================#
-echo "CREATE USER 'username'@'localhost' IDENTIFIED BY 'password';" | mysql
-echo "GRANT ALL PRIVILEGES ON * . * TO 'newuser'@'localhost';" | mysql
+echo ""
+echo "================================================"
+echo ""
+echo "           Setting up MariaDB Server"
+echo ""
+echo "================================================"
+echo ""
+
+echo "drop user admin@localhost;" | mysql
 echo "FLUSH PRIVILEGES;" | mysql
+echo "DELETE FROM mysql.user WHERE User = 'admin';" | mysql
+echo "CREATE USER 'admin'@'localhost' IDENTIFIED BY 'password';" | mysql
+echo "GRANT ALL PRIVILEGES ON * . * TO 'admin'@'localhost';" | mysql
+echo "FLUSH PRIVILEGES;" | mysql
+
+echo "Done"
 
 
 #============================================#
 #          INSTALLING NODE PACKAGES          #
 #============================================#
+echo ""
+echo "================================================"
+echo ""
+echo "            Setting up node packages"
+echo ""
+echo "================================================"
+echo ""
+
 cd /home/pi/demo1.checkingate.mekosoft.vn/web
 npm install
 
@@ -85,13 +140,30 @@ npm install
 #============================================#
 #          COMPILING SENSOR READER           #
 #============================================#
+echo ""
+echo "================================================"
+echo ""
+echo "            Compiling sensor reader..."
+echo ""
+echo "================================================"
+echo ""
+
 cd /home/pi/demo1.checkingate.mekosoft.vn/sensor_reader
-make
+make clean
+make > /dev/null
 
 
 #============================================#
 #              Enabling services             #
 #============================================#
+echo ""
+echo "================================================"
+echo ""
+echo "           Creating service files..."
+echo ""
+echo "================================================"
+echo ""
+
 echo "
 [Unit]
 Description=Logger service
@@ -101,7 +173,7 @@ After=multi-user.target
 [Service]
 Type=simple
 ExecStart=java -jar checkingate.jar vn.mekosoft.checkin.logger.Main
-WorkingDirectory=$HOME/demo1.checkingate.mekosoft.vn
+WorkingDirectory=/home/pi/demo1.checkingate.mekosoft.vn
 Restart=always
 RestartSec=1000ms
 
@@ -119,8 +191,8 @@ After=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=$HOME/demo1.checkingate.mekosoft.vn/run_sensor_reader
-WorkingDirectory=$HOME/demo1.checkingate.mekosoft.vn
+ExecStart=/home/pi/demo1.checkingate.mekosoft.vn/run_sensor_reader
+WorkingDirectory=/home/pi/demo1.checkingate.mekosoft.vn
 Restart=always
 RestartSec=1000ms
 
@@ -161,7 +233,7 @@ After=syslog.target network-online.target
 
 [Service]
 Type=simple
-ExecStartPre=echo "RELOAD SENSOR READER SERVICE"
+ExecStartPre=echo \"RELOAD SENSOR READER SERVICE\"
 ExecStart=systemctl restart sensor_reader.service
 Restart=always
 RestartSec=30
@@ -171,13 +243,22 @@ KillMode=process
 WantedBy=multi-user.target
 " > /etc/systemd/system/reload_sensor_reader.service
 
-systemctl enable logger sensor_reader web reload_sensor_reader
-systemctl start logger sensor_reader web reload_sensor_reader
+echo "Enabling services"
+systemctl enable logger sensor_reader web #reload_sensor_reader
+systemctl start logger sensor_reader web #reload_sensor_reader
 
 
 #============================================#
 #             DISABLING BLUETOOTH            #
 #============================================#
+echo ""
+echo "================================================"
+echo ""
+echo "              Disabling bluetooth"
+echo ""
+echo "================================================"
+echo ""
+
 if [ 0 -eq $( grep -c 'dtoverlay=disable-bt' /boot/config.txt ) ]; then # check if the phrase "dtoverlay=disable-bt" existed in the file or not
   echo "dtoverlay=disable-bt" | tee -a /boot/config.txt # Disable Bluetooth boot
 fi
@@ -185,10 +266,11 @@ systemctl disable hciuart.service # Disable systemd service that initializes Blu
 #systemctl disable bluealsa.service
 systemctl disable bluetooth.service
 systemctl disable bluetooth cron 
-apt-get remove -y bluez
-apt-get autoremove -y
+apt-get remove -y bluez > /dev/null
+apt-get autoremove -y > /dev/null
 
 if [ $(cat /boot/config.txt | egrep 'enable_uart=1' | wc -l) -eq 0 ]; then
+	echo "Disabling UART..."
 	echo "enable_uart=1" >> /boot/config.txt
 fi
 
@@ -196,7 +278,37 @@ fi
 #============================================#
 #          CREATING RABBITMQ ACCOUNT         #
 #============================================#
-rabbitmqctl add_user admin admin123
+echo ""
+echo "================================================"
+echo ""
+echo "              Configuring rabbitmq"
+echo ""
+echo "================================================"
+echo ""
+
+echo "
+BusHost=demo1.gate.mekosoft.vn
+BusAccount=admin
+BusPassword=admin
+PirScript=/home/pi/demo1.checkingate.mekosoft.vn/resources/pir
+RfidScript=/home/pi/demo1.checkingate.mekosoft.vn/resources/rfid
+FrontCameraScript=./resources/camera-109.sh
+RearCameraScript=./resources/camera-108.sh
+PhotoFolder=./resources/photos
+DbHost=localhost
+DbAccount=admin
+DbPassword=admin
+PirSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/TakePhoto.wav
+RfidSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/Checkin.wav
+WelcomeSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/WelcomeToCheckinGate.wav
+" > /tmp/config.properties
+
+if [ -f vn.mekosoft.checkin.logger.QueueManager.jar ]; then
+	echo "Running java -jar vn.mekosoft.checkin.logger.QueueManager.jar"
+	java -jar vn.mekosoft.checkin.logger.QueueManager.jar
+fi
+
+rabbitmqctl add_user admin admin
 rabbitmqctl set_user_tags admin administrator
 rabbitmqctl set_user_tags admin management
 rabbitmqctl set_permissions -p / admin ".*" ".*" ".*"
@@ -204,8 +316,21 @@ rabbitmq-plugins enable rabbitmq_management
 
 
 #============================================#
+#            Partitioning the card           #
+#============================================#
+
+
+
+#============================================#
 #                    RTC                     #
 #============================================#
+echo ""
+echo "================================================"
+echo ""
+echo "                Configuring RTC..."
+echo ""
+echo "================================================"
+echo ""
 
 FLAGDIR=/home
 
@@ -240,7 +365,7 @@ sed -i -e '/^.*\/sbin\/hwclock --rtc=\$dev --systz$/ s/^/#/' /lib/udev/hwclock-s
 
 touch $FLAGDIR/rtc_setup_flag
 echo "
-  sudo ifconfig eth0 down
+  	sudo ifconfig eth0 down
 	sleep 2
 
 	# automatically get and set time from the internet (workaround for proxy setting)

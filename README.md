@@ -126,6 +126,26 @@ FLUSH PRIVILEGES;
 
 ***
 
+## Optional: Partitioning the SD card
+
+### Shrinking the partition
+
+```sh
+sudo parted /dev/mmcblk0
+(parted) resizepart
+(parted) 2
+(parted) 8GB
+(parted) yes
+```
+
+### Formatting the partition
+
+```sh
+mkfs.ext4 /dev/mmcblk0p3
+```
+
+
+
 ## References
 
 - [Setting up NTP server](http://raspberrypi.tomasgreno.cz/ntp-client-and-server.html)

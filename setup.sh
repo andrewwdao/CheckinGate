@@ -259,7 +259,7 @@ After=multi-user.target
 [Service]
 Type=simple
 ExecStart=node web/index
-WorkingDirectory=$HOME/demo1.checkingate.mekosoft.vn
+WorkingDirectory=/home/pi/demo1.checkingate.mekosoft.vn
 Restart=always
 RestartSec=1000ms
 
@@ -289,9 +289,26 @@ KillMode=process
 WantedBy=multi-user.target
 " > /etc/systemd/system/reload_sensor_reader.service
 
+echo "
+[Unit]
+Description=usb switch-mode service
+DefaultDependencies=true
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStartPre=sleep 7
+ExecStart=usb_modeswitch -W -I -v 12d1 -p 1446 -M 55534243123456780000000000000011062000000100010100000000000000
+
+[Install]
+WantedBy=multi-user.target
+
+# reference: https://www.raspberrypi.org/forums/viewtopic.php?t=221507
+"  > /etc/systemd/system/sms_enabler.service
+
 echo "Enabling services"
-systemctl enable logger sensor_reader web #reload_sensor_reader
-systemctl start logger sensor_reader web #reload_sensor_reader
+systemctl enable logger sensor_reader web sms_enabler #reload_sensor_reader
+systemctl start logger sensor_reader web sms_enabler #reload_sensor_reader
 
 
 #============================================#

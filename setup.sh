@@ -40,8 +40,9 @@ if [ $(grep 'demo1.gate.mekosoft.vn' /etc/hosts | wc -l) -eq 0 ]; then
 	# hostname checkingate
 	sed -i "s/raspberrypi/checkingate/g" /etc/hosts
 	echo checkingate > /etc/hostname
+	
 	echo "127.0.0.1   demo1.gate.mekosoft.vn" >> /etc/hosts
-	echo "127.0.1.1   demo1.gate.mekosoft.vn" >> /etc/hosts
+	echo "127.0.0.1   demo1.checkingate.mekosoft.vn" >> /etc/hosts
 fi
 
 

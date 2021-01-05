@@ -8,7 +8,21 @@
 git clone https://github.com/minhan74/CheckinGate
 ```
 
-### Build and run
+### Rename CheckinGate to demo1.checkingate.mekosoft.vn
+
+```sh
+mv Checkingate-master demo1.checkingate.mekosoft.vn (maybe??)
+```
+
+### Running setup script
+
+```sh
+cd demo1.checkingate.mekosoft.vn
+chmod +x setup.sh
+./setup.sh
+```
+
+## Build and run sensor reader
 
 ```sh
 cd CheckinGate/main && mkdir obj && mkdir img

@@ -22,21 +22,6 @@ echo "================================================"
 echo ""
 sed -i "0,/console=serial0,115200 /s///" /boot/cmdline.txt
 
-#============================================#
-#        Setting up static IP for eth0       #
-#============================================#
-if [ $(egrep '^interface eth0' /etc/dhcpcd.conf | wc -l) -eq 0 ]; then
-	echo ""
-	echo "================================================"
-	echo ""
-	echo "          Setting up static IP for eth0"
-	echo ""
-	echo "================================================"
-	echo ""
-	sed -i "0,/#interface eth0/{s/#\(interface eth0\)/\1/}" /etc/dhcpcd.conf
-	sed -i "0,/#static ip_address/{s/#\(static ip_address=\).*/\1192\.168\.1\.1\/24/}" /etc/dhcpcd.conf
-	sed -i "0,/#static domain_name_servers/{s/#\(static domain_name_servers=\).*/\1192\.168\.1\.1 172\.18\.27\.6 172\.18\.27\.8 8\.8\.8\.8/}" /etc/dhcpcd.conf
-fi
 
 
 #============================================#
@@ -51,9 +36,51 @@ if [ $(grep 'demo1.gate.mekosoft.vn' /etc/hosts | wc -l) -eq 0 ]; then
 	echo ""
 	echo "================================================"
 	echo ""
+
+	# hostname checkingate
+	sed -i "s/raspberrypi/checkingate/g" /etc/hosts
+	echo checkingate > /etc/hostname
 	echo "127.0.0.1   demo1.gate.mekosoft.vn" >> /etc/hosts
 	echo "127.0.1.1   demo1.gate.mekosoft.vn" >> /etc/hosts
 fi
+
+
+#============================================#
+#        Setting up static IP for eth0       #
+#============================================#
+if [ $(egrep '^interface eth0' /etc/dhcpcd.conf | wc -l) -eq 0 ]; then
+	echo ""
+	echo "================================================"
+	echo ""
+	echo "          Setting up static IP for eth0"
+	echo ""
+	echo "================================================"
+	echo ""
+	sed -i "0,/#interface eth0/{s/#\(interface eth0\)/\1/}" /etc/dhcpcd.conf
+	sed -i "0,/#static ip_address/{s/#\(static ip_address=\).*/\1192\.168\.1\.234\/24/}" /etc/dhcpcd.conf
+	sed -i "0,/#static domain_name_servers/{s/#\(static domain_name_servers=\).*/\1192\.168\.1\.1 172\.18\.27\.6 172\.18\.27\.8 8\.8\.8\.8/}" /etc/dhcpcd.conf
+fi
+
+
+#============================================#
+#        Setting up IP for web config        #
+#============================================#
+echo ""
+echo "================================================"
+echo ""
+echo "          Setting up IP for web config"
+echo ""
+echo "================================================"
+echo ""
+
+echo "
+HOST=checkingate
+PORT=
+USERNAMEDB=admin
+PASSWORD=admin123
+DATABASE=checkingate
+" > /home/pi/demo1.checkingate.mekosoft.vn/web/config/config.env
+
 
 #============================================#
 #        Installing the core packages        #

@@ -148,7 +148,7 @@ echo ""
 echo "================================================"
 echo ""
 
-echo "drop user admin@localhost;" | mysql
+echo "drop user if exists admin@localhost;" | mysql
 echo "FLUSH PRIVILEGES;" | mysql
 echo "DELETE FROM mysql.user WHERE User = 'admin';" | mysql
 echo "CREATE USER 'admin'@'localhost' IDENTIFIED BY 'admin123';" | mysql
@@ -237,6 +237,9 @@ echo "           Creating service files..."
 echo ""
 echo "================================================"
 echo ""
+
+echo "Changing timezone to Asia/Ho_Chi_Minh"
+timedatectl set-timezone Asia/Ho_Chi_Minh
 
 echo "
 [Unit]
@@ -401,13 +404,13 @@ DbPassword=admin
 PirSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/TakePhoto.wav
 RfidSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/Checkin.wav
 WelcomeSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/WelcomeToCheckinGate.wav
-" > /home/pi/demo1.checkingate.mekosoft.vn
+" > /home/pi/demo1.checkingate.mekosoft.vn/config.properties
 
-if [ -f vn.mekosoft.checkin.logger.QueueManager.jar ]; then
+if [ -f /home/pi/demo1.checkingate.mekosoft.vn/vn.mekosoft.checkin.logger.QueueManager.jar ]; then
 	echo "Running java -jar vn.mekosoft.checkin.logger.QueueManager.jar"
 	cp /home/pi/demo1.checkingate.mekosoft.vn/config.properties /tmp
 	#java -jar vn.mekosoft.checkin.logger.QueueManager.jar
-	su -c "java -jar vn.mekosoft.checkin.logger.QueueManager.jar" pi
+	su -c "java -jar /home/pi/demo1.checkingate.mekosoft.vn/vn.mekosoft.checkin.logger.QueueManager.jar" pi
 fi
 
 

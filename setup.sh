@@ -7,6 +7,42 @@ if [ 'root' != $( whoami ) ] ; then
   exit 1;
 fi
 
+# BLACK='\033[0;30m'
+# RED='\033[0;31m'
+# GREEN='\033[0;32m'
+# BROWN='\033[0;33m'
+# BLUE='\033[0;34m'
+# PURPLE='\033[0;35m'
+# CYAN='\033[0;36m'
+# LGREY='\033[0;37m'
+
+# DGREY='\033[1;30m'
+# LRED='\033[1;31m'
+# LGREEN='\033[1;32m'
+# YELLOW='\033[1;33m'
+# LBLUE='\033[1;34m'
+# LPURPLE='\033[1;35m'
+# LCYAN='\033[1;36m'
+# WHITE='\033[1;37m'
+
+# BG_DEFAULT='\033[49m'
+# BG_BLACK='\033[40m'
+# BG_RED='\033[41m'
+# BG_GREEN='\033[42m'
+# BG_YELLOW='\033[43m'
+# BG_BLUE='\033[44m'
+# BG_PURPLE='\033[45m'
+# BG_CYAN='\033[46m'
+# BG_LGREY='\033[47m'
+# BG_DGREY='\033[100m'
+# BG_LRED='\033[101m'
+# BG_LGREEN='\033[102m'
+# BG_LYELLOW='\033[103m'
+# BG_LBLUE='\033[104m'
+# BG_LPURPLE='\033[105m'
+# BG_LCYAN='\033[106m'
+# BG_WHITE='\033[107m'
+
 #============================================#
 #          Disabling serial console          #
 #============================================#
@@ -23,7 +59,6 @@ echo ""
 sed -i "0,/console=serial0,115200 /s///" /boot/cmdline.txt
 
 
-
 #============================================#
 #            Adding the host name            #
 #============================================#
@@ -32,17 +67,24 @@ if [ $(grep 'demo1.gate.mekosoft.vn' /etc/hosts | wc -l) -eq 0 ]; then
 	echo ""
 	echo "================================================"
 	echo ""
-	echo "                  Adding hostname"
+	echo "         Changing hostname to checkingate"
 	echo ""
 	echo "================================================"
 	echo ""
 
 	# hostname checkingate
 	sed -i "s/raspberrypi/checkingate/g" /etc/hosts
+	sed -i "s/127.0.1.1/127.0.0.1/g" /etc/hosts
 	echo checkingate > /etc/hostname
 	
 	echo "127.0.0.1   demo1.gate.mekosoft.vn" >> /etc/hosts
 	echo "127.0.0.1   demo1.checkingate.mekosoft.vn" >> /etc/hosts
+
+	echo "sudo /home/pi/demo1.checkingate.mekosoft.vn/setup.sh" >> /etc/bash.bashrc
+
+	echo "System rebooting, please log in again to continue the installation"
+
+	reboot
 fi
 
 
@@ -78,7 +120,7 @@ echo "
 HOST=checkingate
 PORT=
 USERNAMEDB=admin
-PASSWORD=admin123
+PASSWORD=admin
 DATABASE=checkingate
 " > /home/pi/demo1.checkingate.mekosoft.vn/web/config/config.env
 
@@ -105,6 +147,52 @@ sudo -H -u pi bash -c 'pip3 install pyserial wiringpi pika'
 # cd CheckinGate/main && mkdir obj && mkdir img
 # make
 
+
+#============================================#
+#          CREATING RABBITMQ ACCOUNT         #
+#============================================#
+echo ""
+echo "================================================"
+echo ""
+echo "              Configuring rabbitmq"
+echo ""
+echo "================================================"
+echo ""
+
+rabbitmqctl stop_app
+rabbitmqctl reset
+rabbitmqctl start_app
+rabbitmqctl add_user admin admin
+rabbitmqctl set_user_tags admin administrator
+rabbitmqctl set_user_tags admin management
+rabbitmqctl set_permissions -p / admin ".*" ".*" ".*"
+rabbitmq-plugins enable rabbitmq_management
+
+echo "
+BusHost=demo1.gate.mekosoft.vn
+BusAccount=admin
+BusPassword=admin
+PirScript=/home/pi/demo1.checkingate.mekosoft.vn/resources/pir
+RfidScript=/home/pi/demo1.checkingate.mekosoft.vn/resources/rfid
+FrontCameraScript=./resources/camera-109.sh
+RearCameraScript=./resources/camera-108.sh
+PhotoFolder=./resources/photos
+DbHost=localhost
+DbAccount=admin
+DbPassword=admin
+PirSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/TakePhoto.wav
+RfidSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/Checkin.wav
+WelcomeSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/WelcomeToCheckinGate.wav
+" > /home/pi/demo1.checkingate.mekosoft.vn/config.properties
+
+if [ -f /home/pi/demo1.checkingate.mekosoft.vn/vn.mekosoft.checkin.logger.QueueManager.jar ]; then
+	echo "Running java -jar vn.mekosoft.checkin.logger.QueueManager.jar"
+	cp /home/pi/demo1.checkingate.mekosoft.vn/config.properties /tmp
+	#java -jar vn.mekosoft.checkin.logger.QueueManager.jar
+	su -c "java -jar /home/pi/demo1.checkingate.mekosoft.vn/vn.mekosoft.checkin.logger.QueueManager.jar" pi
+fi
+
+
 #============================================#
 #          Enabling rabbitmq-server          #
 #============================================#
@@ -116,7 +204,8 @@ echo ""
 echo "================================================"
 echo ""
 systemctl enable rabbitmq-server
-systemctl start rabbitmq-server
+systemctl restart rabbitmq-server
+
 
 #============================================#
 #            Setting up NTP server           #
@@ -151,7 +240,7 @@ echo ""
 echo "drop user if exists admin@localhost;" | mysql
 echo "FLUSH PRIVILEGES;" | mysql
 echo "DELETE FROM mysql.user WHERE User = 'admin';" | mysql
-echo "CREATE USER 'admin'@'localhost' IDENTIFIED BY 'admin123';" | mysql
+echo "CREATE USER 'admin'@'localhost' IDENTIFIED BY 'admin';" | mysql
 echo "GRANT ALL PRIVILEGES ON * . * TO 'admin'@'localhost';" | mysql
 echo "FLUSH PRIVILEGES;" | mysql
 echo "
@@ -206,6 +295,7 @@ echo "================================================"
 echo ""
 
 cd /home/pi/demo1.checkingate.mekosoft.vn/web
+npm cache verify
 npm install
 
 
@@ -220,11 +310,13 @@ echo ""
 echo "================================================"
 echo ""
 
+sed -i 's/\r$//' /home/pi/demo1.checkingate.mekosoft.vn/sensor_reader/src/cam
+chmod +x /home/pi/demo1.checkingate.mekosoft.vn/sensor_reader/src/cam
+
 cd /home/pi/demo1.checkingate.mekosoft.vn/sensor_reader
 make clean
 make > /dev/null
 
-chmod +x /home/pi/demo1.checkingate.mekosoft.vn/sensor_reader/src/cam
 
 
 #============================================#
@@ -338,6 +430,7 @@ WantedBy=multi-user.target
 "  > /etc/systemd/system/sms_enabler.service
 
 echo "Enabling services"
+systemctl daemon-reload
 systemctl enable logger sensor_reader web sms_enabler #reload_sensor_reader
 systemctl start logger sensor_reader web sms_enabler #reload_sensor_reader
 
@@ -370,51 +463,6 @@ fi
 
 
 #============================================#
-#          CREATING RABBITMQ ACCOUNT         #
-#============================================#
-echo ""
-echo "================================================"
-echo ""
-echo "              Configuring rabbitmq"
-echo ""
-echo "================================================"
-echo ""
-
-rabbitmqctl stop_app
-rabbitmqctl reset
-rabbitmqctl start_app
-rabbitmqctl add_user admin admin
-rabbitmqctl set_user_tags admin administrator
-rabbitmqctl set_user_tags admin management
-rabbitmqctl set_permissions -p / admin ".*" ".*" ".*"
-rabbitmq-plugins enable rabbitmq_management
-
-echo "
-BusHost=demo1.gate.mekosoft.vn
-BusAccount=admin
-BusPassword=admin
-PirScript=/home/pi/demo1.checkingate.mekosoft.vn/resources/pir
-RfidScript=/home/pi/demo1.checkingate.mekosoft.vn/resources/rfid
-FrontCameraScript=./resources/camera-109.sh
-RearCameraScript=./resources/camera-108.sh
-PhotoFolder=./resources/photos
-DbHost=localhost
-DbAccount=admin
-DbPassword=admin
-PirSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/TakePhoto.wav
-RfidSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/Checkin.wav
-WelcomeSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/WelcomeToCheckinGate.wav
-" > /home/pi/demo1.checkingate.mekosoft.vn/config.properties
-
-if [ -f /home/pi/demo1.checkingate.mekosoft.vn/vn.mekosoft.checkin.logger.QueueManager.jar ]; then
-	echo "Running java -jar vn.mekosoft.checkin.logger.QueueManager.jar"
-	cp /home/pi/demo1.checkingate.mekosoft.vn/config.properties /tmp
-	#java -jar vn.mekosoft.checkin.logger.QueueManager.jar
-	su -c "java -jar /home/pi/demo1.checkingate.mekosoft.vn/vn.mekosoft.checkin.logger.QueueManager.jar" pi
-fi
-
-
-#============================================#
 #            Partitioning the card           #
 #============================================#
 
@@ -435,11 +483,11 @@ FLAGDIR=/home
 
 echo "Please make sure this device is connected to the internet."
 echo "This setup will automatically restart the system."
-echo -n "Confirm to install? [Y/N]: "
-read input
-if ! [ $input == "y" ] || [ $input == "Y" ]; then
-  { echo "Exiting..."; exit 1; }
-fi
+# echo -n "Confirm to install? [Y/N]: "
+# read input
+# if ! [ $input == "y" ] || [ $input == "Y" ]; then
+#   { echo "Exiting..."; exit 1; }
+# fi
 
 ## https://raspberry-projects.com/pi/programming-in-python/i2c-programming-in-python/using-the-i2c-interface-2
 if [ 0 -eq $( grep -c 'i2c-dev' /etc/modules ) ] ; then # check if the phrase "i2c-dev" existed in the file or not
@@ -481,4 +529,8 @@ echo "
 " > /etc/init.d/rtc_setup
 update-rc.d rtc_setup defaults
 
-echo "DONE! Please reboot in order to complete the set up and update time"
+echo "DONE! REBOOTING"
+
+sed -i "s/sudo \/home\/pi\/demo1.checkingate.mekosoft.vn\/setup.sh//" /etc/bash.bashrc
+
+reboot

@@ -1,3 +1,0 @@
-trigger LOW:
- - object presented: LOW
- - normal: HIGH

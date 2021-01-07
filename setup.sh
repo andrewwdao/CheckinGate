@@ -172,17 +172,17 @@ echo "
 BusHost=demo1.gate.mekosoft.vn
 BusAccount=admin
 BusPassword=admin
-PirScript=/home/pi/demo1.checkingate.mekosoft.vn/resources/pir
-RfidScript=/home/pi/demo1.checkingate.mekosoft.vn/resources/rfid
-FrontCameraScript=./resources/camera-109.sh
-RearCameraScript=./resources/camera-108.sh
-PhotoFolder=./resources/photos
+# PirScript=/home/pi/demo1.checkingate.mekosoft.vn/resources/pir
+# RfidScript=/home/pi/demo1.checkingate.mekosoft.vn/resources/rfid
+# FrontCameraScript=./resources/camera-109.sh
+# RearCameraScript=./resources/camera-108.sh
+# PhotoFolder=./resources/photos
 DbHost=localhost
 DbAccount=admin
 DbPassword=admin
-PirSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/TakePhoto.wav
-RfidSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/Checkin.wav
-WelcomeSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/resources/audio/WelcomeToCheckinGate.wav
+PirSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/audio/TakePhoto.wav
+RfidSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/audio/Checkin.wav
+WelcomeSoundFile=/home/pi/demo1.checkingate.mekosoft.vn/audio/WelcomeToCheckinGate.wav
 " > /home/pi/demo1.checkingate.mekosoft.vn/config.properties
 
 if [ -f /home/pi/demo1.checkingate.mekosoft.vn/vn.mekosoft.checkin.logger.QueueManager.jar ]; then

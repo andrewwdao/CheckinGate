@@ -1,2 +1,0 @@
-# Run command below to config serial port
-gammu-config

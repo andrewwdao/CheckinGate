@@ -140,6 +140,22 @@ apt-get install default-jre git rabbitmq-server mariadb-server wiringpi git npm 
 sudo -H -u pi bash -c 'pip install pyserial'
 sudo -H -u pi bash -c 'pip3 install pyserial wiringpi pika'
 
+
+#============================================#
+#          INSTALLING NODE PACKAGES          #
+#============================================#
+echo ""
+echo "================================================"
+echo ""
+echo "            Setting up node packages"
+echo ""
+echo "================================================"
+echo ""
+
+cd /home/pi/demo1.checkingate.mekosoft.vn/web
+npm cache verify
+npm install
+
 #============================================#
 #      Cloning and building the source       #
 #============================================#
@@ -281,22 +297,6 @@ create table nhan_vien(
 
 
 echo "Done"
-
-
-#============================================#
-#          INSTALLING NODE PACKAGES          #
-#============================================#
-echo ""
-echo "================================================"
-echo ""
-echo "            Setting up node packages"
-echo ""
-echo "================================================"
-echo ""
-
-cd /home/pi/demo1.checkingate.mekosoft.vn/web
-npm cache verify
-npm install
 
 
 #============================================#

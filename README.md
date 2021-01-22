@@ -8,7 +8,7 @@
 git clone https://github.com/minhan74/CheckinGate
 ```
 
-### Rename CheckinGate to demo1.checkingate.mekosoft.vn
+### Change the project directory name
 
 ```sh
 mv Checkingate-master demo1.checkingate.mekosoft.vn (maybe??)
@@ -28,6 +28,22 @@ chmod +x setup.sh
 cd CheckinGate/main && mkdir obj && mkdir img
 make
 ./main
+```
+
+## Configuring Chafon UHF RFID reader (USB)
+
+### Installing necessary package
+
+```bash
+sudo apt-get install libusb-1.0-0-dev
+```
+
+```bash
+echo 'SUBSYSTEM=="usb",ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="e010", MODE="666", GROUP+="plugdev"' > /etc/udev/rules.d/10-my-usb.rules
+
+udevadm trigger
+
+export LD_LIBRARY_PATH="/home/pi/demo1.checkingate.mekosoft.vn/sensor_reader/lib"
 ```
 
 ***

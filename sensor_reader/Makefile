@@ -19,10 +19,10 @@ DEPS=$(DEPS_:%=$(OBJ_DIR)/%.o)
 LIB_DEPS_=amqp_api amqp_connection amqp_mem amqp_socket amqp_table amqp_tcp_socket amqp_time amqp_framing
 LIB_DEPS=$(LIB_DEPS_:%=$(OBJ_DIR)/%.o)
 
-CFLAGS=-lwiringPi -lpthread
+CFLAGS=-lwiringPi -lpthread -lCFHidApi -lusb-1.0
 
 $(TARGET): $(OBJ_DIR)/$(TARGET).o $(LIB_DEPS) $(DEPS)
-	$(COMPILER) -I$(HEADERS_DIR) -o $@ $^ $(CFLAGS)
+	$(COMPILER) -Llib -I$(HEADERS_DIR) -o $@ $^ $(CFLAGS)
 	mv $(TARGET) ../run_$(TARGET)
 	
 # Build library object files from library source files

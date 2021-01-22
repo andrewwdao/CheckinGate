@@ -136,7 +136,7 @@ echo ""
 echo "================================================"
 echo ""
 apt-get update -y && apt-get upgrade -y
-apt-get install default-jre git rabbitmq-server mariadb-server wiringpi git npm ntp vim python-pip python3-pip ffmpeg -y
+apt-get install default-jre git rabbitmq-server mariadb-server wiringpi git npm ntp vim python-pip python3-pip ffmpeg libusb-1.0-0-dev -y
 sudo -H -u pi bash -c 'pip install pyserial'
 sudo -H -u pi bash -c 'pip3 install pyserial wiringpi pika'
 
@@ -310,6 +310,10 @@ echo ""
 echo "================================================"
 echo ""
 
+echo 'SUBSYSTEM=="usb",ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="e010", MODE="666", GROUP+="plugdev"' > /etc/udev/rules.d/10-my-usb.rules
+udevadm trigger
+export LD_LIBRARY_PATH="/home/pi/demo1.checkingate.mekosoft.vn/sensor_reader/lib"
+
 sed -i 's/\r$//' /home/pi/demo1.checkingate.mekosoft.vn/sensor_reader/src/cam
 chmod +x /home/pi/demo1.checkingate.mekosoft.vn/sensor_reader/src/cam
 
@@ -360,6 +364,7 @@ After=multi-user.target
 
 [Service]
 Type=simple
+Environment=\"LD_LIBRARY_PATH=/home/pi/demo1.checkingate.mekosoft.vn/sensor_reader/lib\"
 ExecStart=/home/pi/demo1.checkingate.mekosoft.vn/run_sensor_reader
 WorkingDirectory=/home/pi/demo1.checkingate.mekosoft.vn
 Restart=always

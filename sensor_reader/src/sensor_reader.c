@@ -27,6 +27,7 @@
 #include <rfid.h>
 #include <uhf.h>
 #include <sensor_reader.h>
+#include <CFHidApi.h>
 
 pthread_t camera_thread_id;
 // ------------------------- Variables -----------------------------------
@@ -139,6 +140,7 @@ void cfuhf_callback(int msg, int tag_num, unsigned char *tag_data, int tag_data_
 			sprintf(tag+i*2, "%02X", tag_data[i+useless_data]);
 		tag[i*2] = '\0';
 
+		printf("UHF EPC: %s\n", tag);
 		uhf_read_handler(tag);
 	}
 }

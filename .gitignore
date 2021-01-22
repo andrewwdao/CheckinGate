@@ -89,7 +89,6 @@ dkms.conf
 *.pch
 
 # Compiled Dynamic libraries
-*.so
 *.dylib
 *.dll
 
@@ -100,7 +99,6 @@ dkms.conf
 # Compiled Static libraries
 *.lai
 *.la
-*.a
 *.lib
 
 # Executables

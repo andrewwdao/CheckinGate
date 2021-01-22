@@ -100,7 +100,8 @@ void camera_init(void)
  *  @brief ISR handler for UHF RFID reader - RS232
  *  @param read_data data that the reader return
  */
-void uhf_read_handler(char* read_data) {
+void uhf_read_handler(char* read_data)
+{
 	char* uhf_src = "rfid.3";
 	char routing_key[20];
 	snprintf(routing_key, 20, "%s.%s", ROUTING_KEY_PREFIX, uhf_src);
@@ -115,6 +116,43 @@ void uhf_read_handler(char* read_data) {
 		send_message(formatted_message, EXCHANGE_NAME, routing_key);
 		if (formatted_message != NULL) free(formatted_message);
 	#endif
+}
+
+void setup_old_uhf()
+{
+	uhf_set_param(EPC_MEMBANK, 0x01, 7);
+	uhf_init(UHF_PORT, UHF_BAUDRATE, OE_PIN);
+	pthread_create(&uhf_thread_id, NULL, uhf_thread, NULL);
+}
+
+void cfuhf_callback(int msg, int tag_num, unsigned char *tag_data, int tag_data_len,unsigned char *devsn)
+{
+	if (msg == 0) printf("New device inserted\n");
+	else if (msg == 1) printf("Device disconnected\n");
+	else
+	{
+		int useless_data = 3;
+		int epc_len = tag_data[0];
+		char* tag = (char*)malloc(sizeof(char) * (epc_len*2 + 1));
+		int i = 0;
+		for (; i < tag_data[0]-useless_data; ++i)
+			sprintf(tag+i*2, "%02X", tag_data[i+useless_data]);
+		tag[i*2] = '\0';
+
+		uhf_read_handler(tag);
+	}
+}
+
+void cfuhf_init()
+{
+	CFHid_OpenDevice();
+	CFHid_SetCallback(cfuhf_callback);
+	CFHid_StartRead(0xFF);
+}
+
+void setup_new_uhf()
+{
+	cfuhf_init();
 }
 
 void resetup()
@@ -169,13 +207,12 @@ int main(int argc, char** argv) {
 		printf("Init UHF RFID (Wiegand 26)...\n");
 		rfid_init(MAIN_UHF, UHF_D0_PIN, UHF_D1_PIN, RFID_NO_OE_PIN);
 		//rfid_init(MAIN_UHF, UHF_D0_PIN, UHF_D1_PIN, RFID_NO_OE_PIN, NULL, NULL, NULL);
-	#endif
-
-	#if en_uhf_rs232
+	#elif en_uhf_rs232
 		printf("Init UHF RFID (RS232)...\n");
-		uhf_set_param(EPC_MEMBANK, 0x01, 7);
-		uhf_init(UHF_PORT, UHF_BAUDRATE, OE_PIN);
-		pthread_create(&uhf_thread_id, NULL, uhf_thread, NULL);
+		setup_old_uhf();
+	#elif en_uhf_usb
+		printf("Init UHF USB...\n");
+		setup_new_uhf();
 	#endif
 
 	#if en_camera

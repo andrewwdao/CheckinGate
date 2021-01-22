@@ -4,6 +4,7 @@
 #define en_rfid	 	  0
 #define en_uhf_w26    0
 #define en_uhf_rs232  1
+#define en_uhf_usb    0
 #define en_camera	  1
 
 // ------------------------- Constants -----------------------------------

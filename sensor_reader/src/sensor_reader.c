@@ -68,6 +68,8 @@ void* uhf_thread(void* arg) {
 	while(1) {
 		char* data = uhf_read_rt_inventory();
 
+		usleep(UHF_DELAY);
+
 		if (data == NULL) continue;
 		
 		if (!(data[0] == 'E' && data[1] == 'R' &&
@@ -108,13 +110,13 @@ void uhf_read_handler(char* read_data)
 	char data[150];
 	snprintf(data, 150, "tag_id:0x%s", read_data);
 
-	if (read_data != NULL) free(read_data);
+	// if (read_data != NULL) free(read_data);
 
 	#if en_rabbitmq
 		now = get_current_time();
 		char* formatted_message = format_message(get_current_time(), "rfid", uhf_src, data, OTHER_SENSOR_ID);
 		send_message(formatted_message, EXCHANGE_NAME, routing_key);
-		if (formatted_message != NULL) free(formatted_message);
+		// if (formatted_message != NULL) free(formatted_message);
 	#endif
 }
 
@@ -143,6 +145,7 @@ void cfuhf_callback(int msg, int tag_num, unsigned char *tag_data, int tag_data_
 	}
 }
 
+#if en_uhf_usb
 void cfuhf_init()
 {
 	CFHid_OpenDevice();
@@ -154,6 +157,7 @@ void setup_new_uhf()
 {
 	cfuhf_init();
 }
+#endif
 
 void resetup()
 {
@@ -223,11 +227,11 @@ int main(int argc, char** argv) {
 	printf("System Ready!\n");
 	fflush(stdout);
 
-	// while (1) pause();
-	while (1) {
-        resetup();
-        sleep(30);
-    }
+	while (1) pause();
+	// while (1) {
+    //     resetup();
+    //     sleep(30);
+    // }
 
 	return 0;
 }

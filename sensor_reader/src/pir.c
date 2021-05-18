@@ -25,7 +25,7 @@ uint64_t now[PIR_CNT+1];
 
 void* pir_send_thread(void* arg) {
     #if en_uhf_rs23
-		uhf_realtime_inventory();
+		// uhf_realtime_inventory();
 	#endif
 
 	uint8_t id = (arg != NULL ? *(uint8_t*)arg : PIR_STATE_ID);
@@ -59,10 +59,10 @@ void* pir_send_thread(void* arg) {
 	// id != PIR_STATE_ID ?
 	// 	usleep(PIR_DEBOUNCE) :
 	// 	usleep(pir_state_debounce ? pir_state_debounce : PIR_STATE_DEBOUNCE);
-	if (id != PIR_STATE_ID) {
-        usleep(PIR_DEBOUNCE);
-        pir_debounce_flag[id] = 1;
-    }
+	// if (id != PIR_STATE_ID) {
+    //     usleep(PIR_DEBOUNCE);
+    //     pir_debounce_flag[id] = 1;
+    // }
 }
 
 void pir_1_isr() {
@@ -74,6 +74,10 @@ void pir_1_isr() {
 		#if en_rabbitmq
 			pthread_create(&pir_thread_id, NULL, pir_send_thread, &pir1_id);
 		#endif
+
+        
+        usleep(PIR_DEBOUNCE);
+        pir_debounce_flag[pir1_id] = 1;
 	}
 }
 
@@ -86,6 +90,10 @@ void pir_2_isr() {
 		#if en_rabbitmq
 			pthread_create(&pir_thread_id, NULL, pir_send_thread, &pir2_id);
 		#endif
+
+        
+        usleep(PIR_DEBOUNCE);
+        pir_debounce_flag[pir2_id] = 1;
 	}
 }
 

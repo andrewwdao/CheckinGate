@@ -17,7 +17,8 @@
 amqp_connection_state_t conn[CONNECTION_COUNT];
 amqp_basic_properties_t props;
 
-char *hostname, *username, *password;
+char message[300];
+char *hostname = NULL, *username = NULL, *password = NULL;
 int port;
 int current_connection = 0;
 
@@ -42,8 +43,6 @@ uint64_t get_current_time(void)
  */
 char* format_message(uint64_t timestamp, char* sensor, char* src, char* data, uint8_t sensor_id)
 {
-	char* message = (char*)malloc(300);
-
 	snprintf(message, 300,
 		"{"
 			"\"timestamp\":%llu,"

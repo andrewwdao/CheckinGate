@@ -116,6 +116,10 @@ static int fd;
 static int membank=TID_MEMBANK;
 static int word_address=0x00;
 static int word_cnt=0x01;
+
+char g_formatted_cmd[100];
+char g_data[300];
+char g_str[300];
 // ------ PUBLIC variable definitions -------------------------
 
 //--------------------------------------------------------------
@@ -144,17 +148,16 @@ char* __format_command(char* arr, uint8_t n)
 {
     n += 4;
     // [header, length, reader_address, command, checksum]
-    char* command = malloc(n);
 
-    command[0] = HEADER;
-    command[1] = n - 2; // Message length count from third byte
-    command[2] = DEFAULT_READER_ADDRESS;
+    g_formatted_cmd[0] = HEADER;
+    g_formatted_cmd[1] = n - 2; // Message length count from third byte
+    g_formatted_cmd[2] = DEFAULT_READER_ADDRESS;
     uint8_t i = 3;
-    for (; i < n - 1; i++) command[i] = arr[i-3];
-    command[i] = __get_checksum(command, i);
+    for (; i < n - 1; i++) g_formatted_cmd[i] = arr[i-3];
+    g_formatted_cmd[i] = __get_checksum(g_formatted_cmd, i);
     //--- debug
-    // for (int j = 0; j < n; j++) printf("%02x ", command[j]); printf("\n"); fflush(stdout);
-    return command;
+    // for (int j = 0; j < n; j++) printf("%02x ", g_formatted_cmd[j]); printf("\n"); fflush(stdout);
+    return g_formatted_cmd;
 }
 
 /**
@@ -166,14 +169,13 @@ char* __format_command(char* arr, uint8_t n)
  */
 char* __get_hex_string(char* arr, uint8_t s, uint8_t e)
 {
-    char* str = malloc((e-s)*3 + 1);
-    char* end_of_str = str;
+    char* end_of_str = g_str;
 
     for (uint8_t i = s; i < e; i++)
         end_of_str += sprintf(end_of_str, "%02X", arr[i]);
 
     *end_of_str = '\0';
-    return str;
+    return g_str;
 }
 
 /**
@@ -191,15 +193,14 @@ char* __read_response_packet(uint8_t* packet_len)
 
         *packet_len = serialGetchar(fd);
 
-        char* data = malloc(*packet_len + 2);
-        data[0] = header;
-        data[1] = *packet_len;
+        g_data[0] = header;
+        g_data[1] = *packet_len;
         for (uint8_t i = 0; i < *packet_len; i++)
-            data[i+2] = serialGetchar(fd);
+            g_data[i+2] = serialGetchar(fd);
         
         *packet_len += 2; // return the full package length including header and package len itself
 
-        return data;
+        return g_data;
     }
     *packet_len = 0;
     return "";
@@ -254,7 +255,6 @@ char* uhf_read_tag()
     uint8_t len = (uint8_t)sizeof(cmd)/sizeof(cmd[0]);
     char* formatted_cmd = __format_command(cmd, len);
     serialPrintf(fd, formatted_cmd);
-    if (formatted_cmd != NULL) free(formatted_cmd);
     
     usleep(10000); // us
 
@@ -285,7 +285,6 @@ char* uhf_read_tag()
                 printf("UHF Read data: 0x%s\n", hex_str);
                 fflush(stdout);
 
-                if (res != NULL) free(res);
                 return hex_str;
             }
         }
@@ -318,7 +317,7 @@ char* uhf_read_rt_inventory()
                 char* hex_str = __get_hex_string(res, 7, res_len - 2);
                 printf("UHF EPC: 0x%s\n", hex_str);
                 fflush(stdout);
-                if (res != NULL) free(res);
+                
                 return hex_str;
             }
         }
@@ -333,7 +332,7 @@ void uhf_realtime_inventory()
     uint8_t len = (uint8_t)sizeof(cmd)/sizeof(cmd[0]);
     char* formatted_cmd = __format_command(cmd, len);
     serialPrintf(fd, formatted_cmd);
-    if (formatted_cmd != NULL) free(formatted_cmd);
+    // if (formatted_cmd != NULL) free(formatted_cmd);
 }
 
 uint8_t uhf_set_param(uint8_t _membank, uint8_t _word_address, uint8_t _word_cnt)

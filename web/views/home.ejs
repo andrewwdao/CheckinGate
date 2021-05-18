@@ -8,16 +8,16 @@
       <ul class="list-group center">
         <li class="list-group-item active">Options</li>
         <li class="list-group-item">
-          <a href="./export-date" class="btn btn-success btn-block">Export Checkin</a>
+          <a href="/export-date" class="btn btn-success btn-block">Export Checkin</a>
         </li>
         <li class="list-group-item">
-          <a href="./uploadexcel" class="btn btn-info btn-block">Upload excel</a>
+          <a href="/uploadexcel" class="btn btn-info btn-block">Upload excel</a>
         </li>
         <li class="list-group-item">
-          <a href="./export" class="btn btn-primary btn-block">Export excel</a>
+          <a href="/export" class="btn btn-primary btn-block">Export excel</a>
         </li>
         <li class="list-group-item">
-          <a onclick="return confirm('Bạn có chắc chắn là muốn xóa tất cả dữ liệu không ?')" href="./deleteall" class="btn btn-danger btn-block"
+          <a onclick="return confirm('Bạn có chắc chắn là muốn xóa tất cả nhân viên không ?')" href="/deleteall" class="btn btn-danger btn-block"
             >Delete All</a
           >
         </li>
@@ -49,12 +49,12 @@
             <td><%- item.dien_thoai %></td>
             <td><%- item.email %></td>
             <td class="text-center">
-              <a href="./edit/<%- item.id %>" class="btn btn-warning text-center">edit</a>
+              <a href="/edit/<%- item.id %>" class="btn btn-warning text-center">edit</a>
             </td>
             <td class="text-center">
               <a
                 onclick="return confirm('Bạn có chắc là muốn xóa <%- item.ho_ten%> không ?')"
-                href="./delete/<%- item.id %>"
+                href="/delete/<%- item.id %>"
                 class="btn btn-danger text-center"
                 >delete</a
               >
